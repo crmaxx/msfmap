@@ -7,18 +7,14 @@ module Ui
 
 ###
 #
-# Privilege escalation extension user interface.
+# MSFMap user interface.
 #
 ###
 class Console::CommandDispatcher::MSFMap
 
 	Klass = Console::CommandDispatcher::MSFMap
-
 	include Console::CommandDispatcher
 
-	#
-	# Initializes an instance of the priv command interaction.
-	#
 	def initialize(shell)
 		super
 	end
@@ -35,6 +31,12 @@ class Console::CommandDispatcher::MSFMap
 	@@msfmap_opts = Rex::Parser::Arguments.new(
 		"-p" 	=> [ true, "Only scan specified ports" ],
 		"-PN"	=> [ false, "Treat all hosts as online -- skip host discovery" ],
+		"-T0"	=> [ false, "Set timing template (higher is faster)" ],
+		"-T1"	=> [ false, "Set timing template (higher is faster)" ],
+		"-T2"	=> [ false, "Set timing template (higher is faster)" ],
+		"-T3"	=> [ false, "Set timing template (higher is faster)" ],
+		"-T4"	=> [ false, "Set timing template (higher is faster)" ],
+		"-T5"	=> [ false, "Set timing template (higher is faster)" ],
 		"-v"	=> [ false, "Increase verbosity level" ],
 		"-h"	=> [ false, "Print this help summary page." ],
 	)
@@ -42,41 +44,46 @@ class Console::CommandDispatcher::MSFMap
 	def cmd_msfmap(*args)
 		# C taught me to define shit here
 		ports_spec = ""
-		ping = true
 		verbosity = 0
-		help = false
 		opts = {}
-		if args.length < 1
-			print_line("MSFMap (v0.2) Meterpreter Base Port Scanner")
+		opts['ping'] = true
+		
+		if args.length < 1 or args.include?("-h")
+			print_line("MSFMap (v0.3) Meterpreter Base Port Scanner")
+			print_line("Usage: msfmap [Options] {target specification}")
 			print_line(@@msfmap_opts.usage)
 			return true
 		end
-		ip_range_walker = Rex::Socket::RangeWalker.new(args.pop())
 
+		ip_range_walker = Rex::Socket::RangeWalker.new(args.pop())
 		@@msfmap_opts.parse(args) { |opt, idx, val|
 			case opt
 				when "-p"
 					ports_spec = val
 				when "-PN"
-					ping = false
+					opts['ping'] = false
 				when "-v"
 					verbosity += 1
-				when "-h"
-					help = true
+				when "-T0"
+					opts['timing'] = 0
+				when "-T1"
+					opts['timing'] = 1
+				when "-T2"
+					opts['timing'] = 2
+				when "-T3"
+					opts['timing'] = 3
+				when "-T4"
+					opts['timing'] = 4
+				when "-T5"
+					opts['timing'] = 5
 			end
 		}
-		if help
-			print_line("MSFMap (v0.2) Meterpreter Base Port Scanner")
-			print_line("Usage: msfmap [Options] {target specification}")
-			print_line(@@msfmap_opts.usage)
-		end
 		if not ports_spec.match(/\d((-|,)\d)*$/)
 			print_error("Invalid Port Specification.")
 			return true
 		else
 			opts['ports'] = Rex::Socket.portspec_crack(ports_spec)
 		end
-		opts['ping'] = ping
 
 		if not client.msfmap.msfmap_init(opts)
 			print_error("Could Not Initialize MSFMap")
@@ -84,7 +91,7 @@ class Console::CommandDispatcher::MSFMap
 		end
 
 		print_line("")
-		print_line("Starting MSFMap 0.2")
+		print_line("Starting MSFMap 0.3")
 		
 		scan_results_length = 0
 		if opts.include?('ports')

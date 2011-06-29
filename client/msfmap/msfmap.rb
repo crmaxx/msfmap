@@ -11,14 +11,16 @@ module MSFMap
 
 ###
 #
+# This meterpreter extension implements an in-memory portscanner with
+# NMap like functionality.
 #
 ###
 class MSFMap < Extension
 
+	attr_accessor :thread_holder_ptr, :number_of_threads
 
 	def initialize(client)
 		super(client, 'msfmap')
-
 		client.register_extension_aliases(
 			[
 				{ 
@@ -26,8 +28,8 @@ class MSFMap < Extension
 					'ext'	=> self
 				},
 			])
-
 		@thread_holder_ptr = 0
+		@number_of_threads = 0
 	end
 	
 	def msfmap_init(opts = {})
@@ -45,6 +47,28 @@ class MSFMap < Extension
 			ping = true
 		end
 		
+		timing_profile = opts['timing'] || 3	# get the timing profile 0-5 then translate it to the proper bit mask
+		case timing_profile
+			when 0	# DO NOT CHANGE THE NUMBER OF THREADS
+				timing_profile = MSFMAP_OPTS_TIMING_0
+				self.number_of_threads = 4
+			when 1
+				timing_profile = MSFMAP_OPTS_TIMING_1
+				self.number_of_threads = 8
+			when 2
+				timing_profile = MSFMAP_OPTS_TIMING_2
+				self.number_of_threads = 16
+			when 3
+				timing_profile = MSFMAP_OPTS_TIMING_3
+				self.number_of_threads = 32
+			when 4
+				timing_profile = MSFMAP_OPTS_TIMING_4
+				self.number_of_threads = 64
+			when 5
+				timing_profile = MSFMAP_OPTS_TIMING_5
+				self.number_of_threads = 128
+		end
+		
 		request = Packet.create_request('msfmap_init')
 		portspacked = pack_ports(ports)
 		request.add_tlv(TLV_TYPE_MSFMAP_PORTS_SPECIFICATION, portspacked)
@@ -54,6 +78,7 @@ class MSFMap < Extension
 		if ping
 			options = (options | MSFMAP_OPTS_PING)
 		end
+		options = (options | timing_profile)
 		
 		request.add_tlv(TLV_TYPE_MSFMAP_SCAN_OPTIONS, options)
 		
@@ -75,7 +100,7 @@ class MSFMap < Extension
 		# shits init'ed now run shit
 		# build the first list of IPs to go
 		ipaddrs = []	# this will need to be fixed to not dump the entire range
-		16.times do |i|
+		self.number_of_threads.times do |i|
 			next_ip = rex_ip_range.next_ip
 			if next_ip == nil
 				break

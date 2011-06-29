@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <winsock2.h>
 #pragma comment(lib, "Ws2_32.lib")
 #include <ws2tcpip.h>
@@ -6,8 +7,7 @@
 #include <icmpapi.h>
 #include "msfmap_core.h"
 
-
-DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum) {
+DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) {
 	/*
 	 *	Returns 0 on successful connect
 	 *	Returns 1 on failure to connect (network problem)
@@ -42,8 +42,8 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum) {
 			FD_SET(ConnectSocket, &Write);
 			FD_SET(ConnectSocket, &Err);
 
-			Timeout.tv_sec = 1;
-			Timeout.tv_usec = 500;
+			Timeout.tv_sec = (*ScanOptions).connectTimeout_sec;
+			Timeout.tv_usec = (*ScanOptions).connectTimeout_usec;
 			iResult = select(0, NULL, &Write, &Err, &Timeout);
 			if (iResult == 0) {
 				retValue = 1;
@@ -67,16 +67,29 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum) {
 DWORD WINAPI scanThread( LPVOID lpParam) {
 	msfmap_thread_info *ThreadInfo = (msfmap_thread_info *)lpParam;
 	unsigned short currentPort = 0; // Frame of reference for portSpec
+	int pingRetVal = 0;
+	int pingCounter = 0;
+	struct sockaddr_in sockinfo;
 
 	// start by checking if we should continue
 	if (iPHasDirectRoute((*ThreadInfo).targetIP) == 1) {
-		if (arpPing((*ThreadInfo).targetIP) != 1) {
-			// host is on our LAN, but is not responding to arps. don't bother scanning.
-			return 0;
+		for (pingCounter = 0; pingCounter < (*ThreadInfo).scanOptions->pingRetries; pingCounter++) {
+			pingRetVal = arpPing((*ThreadInfo).targetIP);
+			if (pingRetVal == 1) {
+				break;
+			}
 		}
-	} else {
-		if (((*ThreadInfo).scanOptions & MSFMAP_OPTS_PING) && (icmpPing((*ThreadInfo).targetIP) != 1)) {
-			// host is not on our LAN, and is not responding to ICMP Echo requests.
+		if (pingRetVal != 1) {
+			return 0;	// host is on our LAN, but is not responding to arps. don't bother scanning.
+		}
+	} else if ((*ThreadInfo).scanOptions->optionFlags & MSFMAP_OPTS_PING) {
+		for (pingCounter = 0; pingCounter < (*ThreadInfo).scanOptions->pingRetries; pingCounter++) {
+			pingRetVal = icmpPing((*ThreadInfo).targetIP);
+			if (pingRetVal == 1) {
+				break;
+			}
+		}
+		if (pingRetVal != 1) {
 			return 0;
 		}
 	}
@@ -92,7 +105,7 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 	}
 
 	while ((*ThreadInfo).portSpec[currentPort] != 0) {
-		if (tcpConnect((*ThreadInfo).targetIP, (*ThreadInfo).portSpec[currentPort]) == 0) {
+		if (tcpConnect((*ThreadInfo).targetIP, (*ThreadInfo).portSpec[currentPort], (*ThreadInfo).scanOptions) == 0) {
 			if (((*ThreadInfo).openPortsBufferEntries * 2) >= (*ThreadInfo).openPortsBufferSize) {
 				(*ThreadInfo).openPortsBuffer = (unsigned short *)increaseBuffer((*ThreadInfo).openPortsBuffer, (*ThreadInfo).openPortsBufferSize, BUFFER_SIZE_INCREMENT);
 				if ((*ThreadInfo).openPortsBuffer == NULL) {
@@ -103,6 +116,11 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 			}
 			(*ThreadInfo).openPortsBuffer[(*ThreadInfo).openPortsBufferEntries] = (*ThreadInfo).portSpec[currentPort];
 			(*ThreadInfo).openPortsBufferEntries++;
+
+#if defined( DEBUG )
+			sockinfo.sin_addr.s_addr = (*ThreadInfo).targetIP;
+			printf("\nTHD:  Open Port: %hu, Host: %s", (*ThreadInfo).portSpec[currentPort], inet_ntoa(sockinfo.sin_addr));
+#endif
 		}
 		currentPort++;
 	}

@@ -7,6 +7,7 @@
 #include "../../ReflectiveDLLInjection/ReflectiveLoader.c"
 #include <stdio.h>
 #include "msfmap_core.h"
+#include "timing_profiles.h"
 
 // this sets the delay load hook function, see DelayLoadMetSrv.h
 EnableDelayLoadMetSrv();
@@ -14,17 +15,18 @@ EnableDelayLoadMetSrv();
 DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 	Packet *response = packet_create_response(packet);
 	msfmap_thread_info *ThreadHolder;
-	int number_of_threads = NUMBER_OF_THREADS;
+	msfmap_scan_options *ScanOptions;
 	int i;
-	unsigned int scanOptions = 0;
+	unsigned int optionFlags = 0;
 	unsigned int returnFlags = 0;	// has nothing to do with the thread-specifc ones. they're still initialized at 0
 	unsigned short *portSpecOld;
 	unsigned short *portSpecNew;
 	unsigned int portSpecBufferSize = BUFFER_SIZE;
 	unsigned short currentPort = 0;
+	unsigned int timingProfile = 0;
 
 	portSpecOld = (unsigned short*)packet_get_tlv_value_raw(packet, TLV_TYPE_MSFMAP_PORTS_SPECIFICATION);
-	scanOptions = packet_get_tlv_value_uint(packet, TLV_TYPE_MSFMAP_SCAN_OPTIONS);
+	optionFlags = packet_get_tlv_value_uint(packet, TLV_TYPE_MSFMAP_SCAN_OPTIONS);
 
 	portSpecNew = (unsigned short *)malloc(BUFFER_SIZE);
 	if (portSpecNew == NULL) {
@@ -37,11 +39,11 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 	memset(portSpecNew, 0, BUFFER_SIZE);
 
 	while (portSpecOld[currentPort] != 0) {
-		if ((currentPort * sizeof(unsigned short)) >= portSpecBufferSize) {
+		if (((currentPort + 1) * sizeof(unsigned short)) >= portSpecBufferSize) {	// plus one for the trailing 0
 			portSpecNew = (unsigned short *)increaseBuffer(portSpecNew, portSpecBufferSize, BUFFER_SIZE_INCREMENT);
 			if (portSpecNew == NULL) {
 				returnFlags = (returnFlags | MSFMAP_RET_MEM_ERR);
-				packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, (unsigned int)&ThreadHolder[0]);
+				packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, (unsigned int)NULL);
 				packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, returnFlags);
 				packet_transmit_response(ERROR_SUCCESS, remote, response);
 
@@ -52,45 +54,92 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 		portSpecNew[currentPort] = portSpecOld[currentPort];
 		currentPort++;
 	}
-	if ((returnFlags & MSFMAP_RET_ERROR_FLAGS) != 0) {	// no error flags are set
-		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, (unsigned int)&ThreadHolder[0]);
-		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, returnFlags);
-		packet_transmit_response(ERROR_SUCCESS, remote, response);
-
-		return ERROR_SUCCESS;
-	}
-	if ((currentPort * sizeof(unsigned short)) >= portSpecBufferSize) {
-		portSpecNew = (unsigned short *)increaseBuffer(portSpecNew, portSpecBufferSize, sizeof(unsigned short));
-		if (portSpecNew == NULL) {
-			returnFlags = (returnFlags | MSFMAP_RET_MEM_ERR);
-		}
-		portSpecBufferSize += sizeof(unsigned short);
-	}
-	if (portSpecNew != NULL) {
-		portSpecNew[currentPort] = 0;	// keep the null terminator
-	}
+	portSpecNew[currentPort] = 0;	// keep the null terminator
 	
-	if ((returnFlags & MSFMAP_RET_ERROR_FLAGS) != 0) {
-		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, (unsigned int)&ThreadHolder[0]);
+	ScanOptions = (msfmap_scan_options *)malloc(sizeof(msfmap_scan_options));
+	if (ScanOptions == NULL) {
+		returnFlags = (returnFlags | MSFMAP_RET_MEM_ERR);
+		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, (unsigned int)NULL);
 		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, returnFlags);
 		packet_transmit_response(ERROR_SUCCESS, remote, response);
 
 		return ERROR_SUCCESS;
 	}
+	memset(ScanOptions, 0, sizeof(ScanOptions));
+
+	(*ScanOptions).optionFlags = optionFlags;
+	timingProfile = (optionFlags & MSFMAP_OPTS_TIMING_FLAGS);
+	switch (timingProfile) {
+		case MSFMAP_OPTS_TIMING_0:
+			(*ScanOptions).pingRetries = TIMING_PROFILE_0_PING_RETRIES;
+			(*ScanOptions).connectTimeout_sec = TIMING_PROFILE_0_CONNECT_TIMEOUT_SEC;
+			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_0_CONNECT_TIMEOUT_USEC;
+			(*ScanOptions).numberOfThreads = TIMING_PROFILE_0_NUMBER_OF_THREADS;
+#if defined ( DEBUG )
+			printf("\nCORE: Setting Timing Profile To 0");
+#endif
+			break;
+		case MSFMAP_OPTS_TIMING_1:
+			(*ScanOptions).pingRetries = TIMING_PROFILE_1_PING_RETRIES;
+			(*ScanOptions).connectTimeout_sec = TIMING_PROFILE_1_CONNECT_TIMEOUT_SEC;
+			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_1_CONNECT_TIMEOUT_USEC;
+			(*ScanOptions).numberOfThreads = TIMING_PROFILE_1_NUMBER_OF_THREADS;
+#if defined ( DEBUG )
+			printf("\nCORE: Setting Timing Profile To 1");
+#endif
+			break;
+		case MSFMAP_OPTS_TIMING_2:
+			(*ScanOptions).pingRetries = TIMING_PROFILE_2_PING_RETRIES;
+			(*ScanOptions).connectTimeout_sec = TIMING_PROFILE_2_CONNECT_TIMEOUT_SEC;
+			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_2_CONNECT_TIMEOUT_USEC;
+			(*ScanOptions).numberOfThreads = TIMING_PROFILE_2_NUMBER_OF_THREADS;
+#if defined ( DEBUG )
+			printf("\nCORE: Setting Timing Profile To 2");
+#endif
+			break;
+		case MSFMAP_OPTS_TIMING_3:
+			(*ScanOptions).pingRetries = TIMING_PROFILE_3_PING_RETRIES;
+			(*ScanOptions).connectTimeout_sec = TIMING_PROFILE_3_CONNECT_TIMEOUT_SEC;
+			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_3_CONNECT_TIMEOUT_USEC;
+			(*ScanOptions).numberOfThreads = TIMING_PROFILE_3_NUMBER_OF_THREADS;
+#if defined ( DEBUG )
+			printf("\nCORE: Setting Timing Profile To 3");
+#endif
+			break;
+		case MSFMAP_OPTS_TIMING_4:
+			(*ScanOptions).pingRetries = TIMING_PROFILE_4_PING_RETRIES;
+			(*ScanOptions).connectTimeout_sec = TIMING_PROFILE_4_CONNECT_TIMEOUT_SEC;
+			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_4_CONNECT_TIMEOUT_USEC;
+			(*ScanOptions).numberOfThreads = TIMING_PROFILE_4_NUMBER_OF_THREADS;
+#if defined ( DEBUG )
+			printf("\nCORE: Setting Timing Profile To 4");
+#endif
+			break;
+		case MSFMAP_OPTS_TIMING_5:
+			(*ScanOptions).pingRetries = TIMING_PROFILE_5_PING_RETRIES;
+			(*ScanOptions).connectTimeout_sec = TIMING_PROFILE_5_CONNECT_TIMEOUT_SEC;
+			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_5_CONNECT_TIMEOUT_USEC;
+			(*ScanOptions).numberOfThreads = TIMING_PROFILE_5_NUMBER_OF_THREADS;
+#if defined ( DEBUG )
+			printf("\nCORE: Setting Timing Profile To 5");
+#endif
+			break;
+	}	
+
 	ThreadHolder = (msfmap_thread_info *)malloc(CALCULATE_SIZE_OF_THREAD_HOLDER);
 	if (ThreadHolder == NULL) {
 		returnFlags = (returnFlags | MSFMAP_RET_MEM_ERR);
-		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, (unsigned int)&ThreadHolder[0]);
+		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, (unsigned int)NULL);
 		packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, returnFlags);
 		packet_transmit_response(ERROR_SUCCESS, remote, response);
 
 		return ERROR_SUCCESS;
 	}
-	for (i = 0; i < number_of_threads; i++) {
+	for (i = 0; i < (*ScanOptions).numberOfThreads; i++) {
 		ThreadHolder[i].threadHandle = NULL;
 		ThreadHolder[i].targetIP = 0;
 		ThreadHolder[i].portSpec = portSpecNew;
-		ThreadHolder[i].scanOptions = scanOptions;
+		ThreadHolder[i].scanOptions = ScanOptions;
 		ThreadHolder[i].returnFlags = 0;
 		ThreadHolder[i].openPortsBufferEntries = 0;
 		ThreadHolder[i].openPortsBufferSize = 0;
@@ -129,9 +178,9 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 
 	// all new ips have been processed, now start waiting for threads to return!
 	while (dwRetVal == WAIT_TIMEOUT) {
-		for (threadHolderPos = 0; threadHolderPos < NUMBER_OF_THREADS; threadHolderPos++) {
+		for (threadHolderPos = 0; threadHolderPos < ThreadHolder[0].scanOptions->numberOfThreads; threadHolderPos++) {
 			if (ThreadHolder[threadHolderPos].threadHandle != NULL) {
-				dwRetVal = WaitForSingleObject(ThreadHolder[threadHolderPos].threadHandle, 100);
+				dwRetVal = WaitForSingleObject(ThreadHolder[threadHolderPos].threadHandle, 10);
 				if (dwRetVal != WAIT_TIMEOUT) {
 #if defined( DEBUG )
 	printf("\nCORE: Thread #%i Returned.", threadHolderPos);
@@ -148,7 +197,7 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 	packet_add_tlv_raw(response, TLV_TYPE_MSFMAP_PORTS_OPEN, ThreadHolder[threadHolderPos].openPortsBuffer, (ThreadHolder[threadHolderPos].openPortsBufferEntries * sizeof(unsigned short)));
 
 #if defined( DEBUG )
-	printf("\nCORE: ReturnFlags = @%i 0x%X", &(ThreadHolder[threadHolderPos].returnFlags), ThreadHolder[threadHolderPos].returnFlags);
+	printf("\nCORE: ReturnFlags = 0x%X", ThreadHolder[threadHolderPos].returnFlags);
 #endif
 	packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, ThreadHolder[threadHolderPos].returnFlags);
 
@@ -170,7 +219,7 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 	Packet *response = packet_create_response(packet);
 	msfmap_thread_info *ThreadHolder;
-	int number_of_threads = NUMBER_OF_THREADS;
+	msfmap_scan_options *ScanOptions;
 	unsigned short *portSpec;
 	unsigned int portSpecEntries = 0;
 
@@ -188,6 +237,10 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 	// clear them all out and free it
 	memset(portSpec, 0, (portSpecEntries * sizeof(unsigned short)));
 	free(portSpec);
+	
+	ScanOptions = ThreadHolder[0].scanOptions;
+	memset(ScanOptions, 0, sizeof(ScanOptions));
+	free(ScanOptions);
 
 	// clear and free the rest of everything else
 	memset(ThreadHolder, 0, CALCULATE_SIZE_OF_THREAD_HOLDER);
@@ -218,8 +271,8 @@ Command customCommands[] =
 		
 	// Terminator
 	{ NULL,
-	  { EMPTY_DISPATCH_HANDLER                      },
-	  { EMPTY_DISPATCH_HANDLER                      },
+		{ EMPTY_DISPATCH_HANDLER				},
+		{ EMPTY_DISPATCH_HANDLER				},
 	},
 };
 
