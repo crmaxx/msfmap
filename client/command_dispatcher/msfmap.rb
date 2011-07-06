@@ -29,8 +29,11 @@ class Console::CommandDispatcher::MSFMap
 	end
 		
 	@@msfmap_opts = Rex::Parser::Arguments.new(
+		"-h"	=> [ false, "Print this help summary page." ],
 		"-p" 	=> [ true, "Only scan specified ports" ],
 		"-PN"	=> [ false, "Treat all hosts as online -- skip host discovery" ],
+		"-sP"	=> [ false, "Ping Scan - go no further than determining if host is online" ],
+		"-sT"	=> [ false, "TCP Connect() scan" ],
 		"-T0"	=> [ false, "Set timing template (higher is faster)" ],
 		"-T1"	=> [ false, "Set timing template (higher is faster)" ],
 		"-T2"	=> [ false, "Set timing template (higher is faster)" ],
@@ -38,15 +41,15 @@ class Console::CommandDispatcher::MSFMap
 		"-T4"	=> [ false, "Set timing template (higher is faster)" ],
 		"-T5"	=> [ false, "Set timing template (higher is faster)" ],
 		"-v"	=> [ false, "Increase verbosity level" ],
-		"-h"	=> [ false, "Print this help summary page." ],
 	)
 	
 	def cmd_msfmap(*args)
 		# C taught me to define shit here
-		ports_spec = ""
+		# ports_spec = nil
 		verbosity = 0
 		opts = {}
 		opts['ping'] = true
+		opts['scan_type'] = 'tcp_connect'
 		
 		if args.length < 1 or args.include?("-h")
 			print_line("MSFMap (v0.3) Meterpreter Base Port Scanner")
@@ -59,7 +62,12 @@ class Console::CommandDispatcher::MSFMap
 		@@msfmap_opts.parse(args) { |opt, idx, val|
 			case opt
 				when "-p"
-					ports_spec = val
+					if not val.match(/\d((-|,)\d)*$/)
+						print_error("Invalid Port Specification.")
+						return true
+					else
+						opts['ports'] = Rex::Socket.portspec_crack(val)
+					end
 				when "-PN"
 					opts['ping'] = false
 				when "-v"
@@ -76,14 +84,12 @@ class Console::CommandDispatcher::MSFMap
 					opts['timing'] = 4
 				when "-T5"
 					opts['timing'] = 5
+				when "-sT"
+					opts['scan_type'] = 'tcp_connect'
+				when "-sP"
+					opts['scan_type'] = 'ping'
 			end
 		}
-		if not ports_spec.match(/\d((-|,)\d)*$/)
-			print_error("Invalid Port Specification.")
-			return true
-		else
-			opts['ports'] = Rex::Socket.portspec_crack(ports_spec)
-		end
 
 		if not client.msfmap.msfmap_init(opts)
 			print_error("Could Not Initialize MSFMap")
@@ -97,13 +103,16 @@ class Console::CommandDispatcher::MSFMap
 		if opts.include?('ports')
 			total_ports = opts['ports'].length
 		else
-			total_ports = 1000	# NMaps top 1000
+			total_ports = 100	# NMaps top 100
 		end
 		client.msfmap.msfmap_core(ip_range_walker) do |scan_results|
 			scan_results_length += scan_results.length
 			scan_results.each do |host_result|
 				print_line("MSFMap scan report for #{host_result['host']}")
 				print_line("Host is up.")
+				if opts['scan_type'] == 'ping'
+					next
+				end
 				
 				not_shown_ports = (total_ports - host_result['open_ports'].length)
 				if not_shown_ports != 0

@@ -16,9 +16,12 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan
 	struct sockaddr_in sockinfo;
 	SOCKET ConnectSocket = INVALID_SOCKET;
 	unsigned long NonBlk = 1;
-	int iResult;
+	int iResult = 2;
 	DWORD Err;
-	DWORD retValue = 1;
+	DWORD retValue = -1;
+	
+	DWORD StartTime = 0;
+	DWORD EndTime = 0;
 
 	sockinfo.sin_family = AF_INET;
 	sockinfo.sin_addr.s_addr = packedIPaddr;
@@ -44,21 +47,26 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan
 
 			Timeout.tv_sec = (*ScanOptions).connectTimeout_sec;
 			Timeout.tv_usec = (*ScanOptions).connectTimeout_usec;
-			iResult = select(0, NULL, &Write, &Err, &Timeout);
+
+			StartTime = GetTickCount();
+			iResult = select(0, NULL, &Write, NULL, &Timeout);
+			EndTime = GetTickCount();
 			if (iResult == 0) {
 				retValue = 1;
 			} else {
 				if (FD_ISSET(ConnectSocket, &Write)) {
 					retValue = 0;
-				}
-				if (FD_ISSET(ConnectSocket, &Err)) {
-					/* printf("Select() Error."); */
+				} else {
+					retValue = 3;
 				}
 			}
 		} else {
-			retValue = 0;
+			retValue = 3;
 		}
+	} else {
+		retValue = 0;
 	}
+
 	closesocket(ConnectSocket);
 	ConnectSocket = INVALID_SOCKET;
 	return retValue;
@@ -69,7 +77,7 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 	unsigned short currentPort = 0; // Frame of reference for portSpec
 	int pingRetVal = 0;
 	int pingCounter = 0;
-	struct sockaddr_in sockinfo;
+	int scanType = ((*ThreadInfo).scanOptions->optionFlags & MSFMAP_OPTS_SCAN_TYPE_FLAGS);
 
 	// start by checking if we should continue
 	if (iPHasDirectRoute((*ThreadInfo).targetIP) == 1) {
@@ -94,6 +102,9 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 		}
 	}
 	(*ThreadInfo).returnFlags = ((*ThreadInfo).returnFlags | MSFMAP_RET_HOST_UP);
+	if (scanType == MSFMAP_OPTS_SCAN_TYPE_PING) {
+		return 0;
+	}
 
 	// next four are for recording open ports
 	(*ThreadInfo).openPortsBufferEntries = 0;
@@ -116,18 +127,9 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 			}
 			(*ThreadInfo).openPortsBuffer[(*ThreadInfo).openPortsBufferEntries] = (*ThreadInfo).portSpec[currentPort];
 			(*ThreadInfo).openPortsBufferEntries++;
-
-#if defined( DEBUG )
-			sockinfo.sin_addr.s_addr = (*ThreadInfo).targetIP;
-			printf("\nTHD:  Open Port: %hu, Host: %s", (*ThreadInfo).portSpec[currentPort], inet_ntoa(sockinfo.sin_addr));
-#endif
 		}
 		currentPort++;
 	}
-
-#if defined( DEBUG )
-	printf("\nTHD:  Scan Thread Successfully Returning.");
-#endif
 	return 0;
 }
 

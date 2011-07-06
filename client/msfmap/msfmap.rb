@@ -46,6 +46,13 @@ class MSFMap < Extension
 		else
 			ping = true
 		end
+		scan_type = opts['scan_type'] || 'tcp_connect'
+		case scan_type
+			when 'tcp_connect'
+				scan_type = MSFMAP_OPTS_SCAN_TYPE_TCP_CONNECT
+			when 'ping'
+				scan_type = MSFMAP_OPTS_SCAN_TYPE_PING
+		end
 		
 		timing_profile = opts['timing'] || 3	# get the timing profile 0-5 then translate it to the proper bit mask
 		case timing_profile
@@ -79,6 +86,7 @@ class MSFMap < Extension
 			options = (options | MSFMAP_OPTS_PING)
 		end
 		options = (options | timing_profile)
+		options = (options | scan_type)
 		
 		request.add_tlv(TLV_TYPE_MSFMAP_SCAN_OPTIONS, options)
 		
@@ -99,7 +107,7 @@ class MSFMap < Extension
 		
 		# shits init'ed now run shit
 		# build the first list of IPs to go
-		ipaddrs = []	# this will need to be fixed to not dump the entire range
+		ipaddrs = []
 		self.number_of_threads.times do |i|
 			next_ip = rex_ip_range.next_ip
 			if next_ip == nil
