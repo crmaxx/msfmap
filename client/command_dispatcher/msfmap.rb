@@ -29,18 +29,13 @@ class Console::CommandDispatcher::MSFMap
 	end
 		
 	@@msfmap_opts = Rex::Parser::Arguments.new(
-		"-h"	=> [ false, "Print this help summary page." ],
-		"-p" 	=> [ true, "Only scan specified ports" ],
-		"-PN"	=> [ false, "Treat all hosts as online -- skip host discovery" ],
-		"-sP"	=> [ false, "Ping Scan - go no further than determining if host is online" ],
-		"-sT"	=> [ false, "TCP Connect() scan" ],
-		"-T0"	=> [ false, "Set timing template (higher is faster)" ],
-		"-T1"	=> [ false, "Set timing template (higher is faster)" ],
-		"-T2"	=> [ false, "Set timing template (higher is faster)" ],
-		"-T3"	=> [ false, "Set timing template (higher is faster)" ],
-		"-T4"	=> [ false, "Set timing template (higher is faster)" ],
-		"-T5"	=> [ false, "Set timing template (higher is faster)" ],
-		"-v"	=> [ false, "Increase verbosity level" ]
+		"-h"		=> [ false, "Print this help summary page." ],
+		"-p" 		=> [ true, "Only scan specified ports" ],
+		"-PN"		=> [ false, "Treat all hosts as online -- skip host discovery" ],
+		"-sP"		=> [ false, "Ping Scan - go no further than determining if host is online" ],
+		"-sT"		=> [ false, "TCP Connect() scan" ],
+		"-T<0-5>"	=> [ false, "Set timing template (higher is faster)" ],
+		"-v"		=> [ false, "Increase verbosity level" ]
 	)
 	
 	def cmd_msfmap(*args)
@@ -59,6 +54,13 @@ class Console::CommandDispatcher::MSFMap
 		end
 
 		ip_range_walker = Rex::Socket::RangeWalker.new(args.pop())
+		args.each do |opt|	# parse custom arguments first
+			if opt[0..1] == "-T" and [ "0", "1", "2", "3", "4", "5" ].include?(opt[2,1])
+				opts['timing'] = opt[2,1].to_i
+			elsif [ "-P0", "-Pn", "-PN" ].include?(opt)
+				opts['ping'] = false
+			end
+		end
 		@@msfmap_opts.parse(args) { |opt, idx, val|
 			case opt
 				when "-p"
@@ -68,22 +70,8 @@ class Console::CommandDispatcher::MSFMap
 					else
 						opts['ports'] = Rex::Socket.portspec_crack(val)
 					end
-				when "-PN"
-					opts['ping'] = false
 				when "-v"
 					verbosity += 1
-				when "-T0"
-					opts['timing'] = 0
-				when "-T1"
-					opts['timing'] = 1
-				when "-T2"
-					opts['timing'] = 2
-				when "-T3"
-					opts['timing'] = 3
-				when "-T4"
-					opts['timing'] = 4
-				when "-T5"
-					opts['timing'] = 5
 				when "-sT"
 					opts['scan_type'] = 'tcp_connect'
 				when "-sP"

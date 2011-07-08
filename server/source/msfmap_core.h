@@ -2,7 +2,7 @@
 #define _METERPRETER_SOURCE_EXTENSION_MSFMAP_MSFMAP_H
 #endif
 
-// #define DEBUG
+#define DEBUG
 
 #define BUFFER_SIZE 1024	// 512 packed ports or 256 packed ips
 #define BUFFER_SIZE_INCREMENT 512
