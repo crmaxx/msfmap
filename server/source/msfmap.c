@@ -221,9 +221,12 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 	msfmap_thread_info *ThreadHolder;
 	msfmap_scan_options *ScanOptions;
 	unsigned short *portSpec;
+	unsigned char threadHolderPos = 0;
 	unsigned int portSpecEntries = 0;
 
-	/// char msgBuffer[4096];
+#if defined ( DEBUG )
+	printf("\nCORE: Cleaning Up...");
+#endif
 
 	(unsigned int)ThreadHolder = packet_get_tlv_value_uint(packet, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION);
 
@@ -232,23 +235,34 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 	// get the number of entries in the portSpec buffer
 	while (portSpec[portSpecEntries] != 0) {
 		portSpecEntries++;
-
 	}
-	// clear them all out and free it
+	// clear all of the ports to 0 to make remaining threads end sooner
 	memset(portSpec, 0, (portSpecEntries * sizeof(unsigned short)));
-	free(portSpec);
-	
+
+	// ensure that all threads have returned
+#if defined ( DEBUG )
+	printf("\nWaiting For Threads To Return...");
+#endif
+	for (threadHolderPos = 0; threadHolderPos < ThreadHolder[0].scanOptions->numberOfThreads; threadHolderPos++) {
+		if (ThreadHolder[threadHolderPos].threadHandle != NULL) {
+			WaitForSingleObject(ThreadHolder[threadHolderPos].threadHandle, INFINITE);
+		}
+	}
+#if defined ( DEBUG )
+	printf("All Threads Have Returned.");
+#endif
+
+	free(portSpec);	// clear and free the rest
 	ScanOptions = ThreadHolder[0].scanOptions;
 	memset(ScanOptions, 0, sizeof(ScanOptions));
 	free(ScanOptions);
-
-	// clear and free the rest of everything else
 	memset(ThreadHolder, 0, CALCULATE_SIZE_OF_THREAD_HOLDER);
 	free(ThreadHolder);
 
-	/// sprintf(msgBuffer, "Overwrote %hu ports\n", portSpecEntries);
-	/// packet_add_tlv_string(response, TLV_TYPE_MSFMAP_GENERIC_RESPONSE, msgBuffer);
 	packet_transmit_response(ERROR_SUCCESS, remote, response);
+#if defined ( DEBUG )
+	printf("\nCORE: Clean Up Done.");
+#endif
 	return ERROR_SUCCESS;
 }
 

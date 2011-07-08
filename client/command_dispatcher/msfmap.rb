@@ -40,7 +40,7 @@ class Console::CommandDispatcher::MSFMap
 		"-T3"	=> [ false, "Set timing template (higher is faster)" ],
 		"-T4"	=> [ false, "Set timing template (higher is faster)" ],
 		"-T5"	=> [ false, "Set timing template (higher is faster)" ],
-		"-v"	=> [ false, "Increase verbosity level" ],
+		"-v"	=> [ false, "Increase verbosity level" ]
 	)
 	
 	def cmd_msfmap(*args)
@@ -93,6 +93,13 @@ class Console::CommandDispatcher::MSFMap
 
 		if not client.msfmap.msfmap_init(opts)
 			print_error("Could Not Initialize MSFMap")
+			return true
+		end
+
+		trap("SIGINT") do
+			print_line("Cleaning Up...")
+			client.msfmap.msfmap_cleanup()
+			print_line("Done.")
 			return true
 		end
 
