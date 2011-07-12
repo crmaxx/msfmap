@@ -241,7 +241,7 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 
 	// ensure that all threads have returned
 #if defined ( DEBUG )
-	printf("\nWaiting For Threads To Return...");
+	printf("\nCORE: Waiting For Threads To Return...");
 #endif
 	for (threadHolderPos = 0; threadHolderPos < ThreadHolder[0].scanOptions->numberOfThreads; threadHolderPos++) {
 		if (ThreadHolder[threadHolderPos].threadHandle != NULL) {
@@ -249,7 +249,7 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 		}
 	}
 #if defined ( DEBUG )
-	printf("All Threads Have Returned.");
+	printf("\nCORE: All Threads Have Returned.");
 #endif
 
 	free(portSpec);	// clear and free the rest
