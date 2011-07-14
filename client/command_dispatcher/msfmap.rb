@@ -28,7 +28,7 @@ class Console::CommandDispatcher::MSFMap
 		}
 	end
 	
-	@@msfmap_version = '0.4'
+	@@msfmap_version = '0.5'
 	
 	@@msfmap_opts = Rex::Parser::Arguments.new(
 		"-h"		=> [ false, "Print this help summary page." ],
