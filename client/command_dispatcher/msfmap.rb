@@ -29,16 +29,18 @@ class Console::CommandDispatcher::MSFMap
 	end
 	
 	@@msfmap_version = '0.5'
+	@@msfmap_default_num_of_ports = 100
 	
 	@@msfmap_opts = Rex::Parser::Arguments.new(
-		"-h"		=> [ false, "Print this help summary page." ],
-		"-oN"		=> [ true,	"Output scan in normal format to the given filename." ],
-		"-p" 		=> [ true,	"Only scan specified ports" ],
-		"-PN"		=> [ false, "Treat all hosts as online -- skip host discovery" ],
-		"-sP"		=> [ false, "Ping Scan - go no further than determining if host is online" ],
-		"-sT"		=> [ false, "TCP Connect() scan" ],
-		"-T<0-5>"	=> [ false, "Set timing template (higher is faster)" ],
-		"-v"		=> [ false, "Increase verbosity level" ]
+		"-h"			=> [ false, "Print this help summary page." ],
+		"-oN"			=> [ true,	"Output scan in normal format to the given filename." ],
+		"-p" 			=> [ true,	"Only scan specified ports" ],
+		"-PN"			=> [ false, "Treat all hosts as online -- skip host discovery" ],
+		"-sP"			=> [ false, "Ping Scan - go no further than determining if host is online" ],
+		"-sT"			=> [ false, "TCP Connect() scan" ],
+		"-T<0-5>"		=> [ false, "Set timing template (higher is faster)" ],
+		"--top-ports"	=> [ true, 	"Scan <number> most common ports" ],
+		"-v"			=> [ false, "Increase verbosity level" ]
 	)
 	
 	def cmd_msfmap(*args)
@@ -62,6 +64,18 @@ class Console::CommandDispatcher::MSFMap
 				opts['timing'] = opt[2,1].to_i
 			elsif [ "-P0", "-Pn", "-PN" ].include?(opt)
 				opts['ping'] = false
+			elsif opt == "--top-ports"
+				val = args[args.index(opt) + 1]
+				if val =~ /^[0-9]+$/
+					val = val.to_i
+					if not (1 < val and val < 1000)
+						print_error("--top-ports should be an integer between 1 and 1000")
+						return true
+					end
+					opts['ports-top'] = val
+				else
+					print_error("--top-ports should be an integer between 1 and 1000")
+				end
 			end
 		end
 		@@msfmap_opts.parse(args) { |opt, idx, val|
@@ -96,19 +110,22 @@ class Console::CommandDispatcher::MSFMap
 			print_line("Done.")
 			return true
 		end
-
+		
 		print_line("")
 		print_line("Starting MSFMap #{@@msfmap_version}")
 		if out_normal
 			out_normal.write("Starting MSFMap #{@@msfmap_version}\n")
 		end
+		start_time = Time.now
 		
 		scan_results_length = 0
 		if opts['scan_type'][0,3] == 'tcp' or opts['scan_type'][0,3] == 'udp'	# setup stuff for scans that include ports
 			if opts.include?('ports')
 				total_ports = opts['ports'].length
+			elsif opts.include?('ports-top')
+				total_ports = opts['ports-top']
 			else
-				total_ports = 100	# NMaps top 100
+				total_ports = @@msfmap_default_num_of_ports
 			end
 
 			ip_proto = opts['scan_type'][0,3]
@@ -166,9 +183,11 @@ class Console::CommandDispatcher::MSFMap
 			end
 		end
 		
-		print_line("MSFMap done: #{ip_range_walker.length} IP address (#{scan_results_length} hosts up)")
+		end_time = Time.now
+		elapsed_time = (end_time - start_time).round(2)
+		print_line("MSFMap done: #{ip_range_walker.length} IP address (#{scan_results_length} hosts up) scanned in #{elapsed_time} seconds\n")
 		if out_normal
-			out_normal.write("MSFMap done: #{ip_range_walker.length} IP address (#{scan_results_length} hosts up)\n")
+			out_normal.write("MSFMap done: #{ip_range_walker.length} IP address (#{scan_results_length} hosts up) scanned in #{elapsed_time} seconds\n")
 			out_normal.close
 		end
 

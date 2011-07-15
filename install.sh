@@ -35,7 +35,7 @@ fi
 
 echo "Installing..."
 
-echo "cp client/command_dispatcher/* $1/msf3/lib/rex/post/meterpreter/ui/console/command_dispatcher/"
+echo "cp client/command_dispatcher/msfmap.rb $1/msf3/lib/rex/post/meterpreter/ui/console/command_dispatcher/msfmap.rb"
 cp client/command_dispatcher/* $1/msf3/lib/rex/post/meterpreter/ui/console/command_dispatcher/
 
 echo "cp -r client/msfmap $1/msf3/lib/rex/post/meterpreter/extensions/"
