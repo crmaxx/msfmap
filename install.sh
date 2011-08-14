@@ -26,7 +26,7 @@ if [ ! -d "$1" ]; then
 	echo ""
 	echo "$USAGE"
 	exit 1
-elif [ ! -d "$1/msf3" ]; then
+elif [ ! -d "$1/lib" ]; then
 	echo "Invalid Directory"
 	echo ""
 	echo "$USAGE"
@@ -35,16 +35,16 @@ fi
 
 echo "Installing..."
 
-echo "cp client/command_dispatcher/msfmap.rb $1/msf3/lib/rex/post/meterpreter/ui/console/command_dispatcher/msfmap.rb"
+echo "cp client/command_dispatcher/* $1/lib/rex/post/meterpreter/ui/console/command_dispatcher/"
 cp client/command_dispatcher/* $1/msf3/lib/rex/post/meterpreter/ui/console/command_dispatcher/
 
-echo "cp -r client/msfmap $1/msf3/lib/rex/post/meterpreter/extensions/"
+echo "cp -r client/msfmap $1/lib/rex/post/meterpreter/extensions/"
 cp -r client/msfmap $1/msf3/lib/rex/post/meterpreter/extensions/
 
-echo "cp server/ext_server_msfmap.dll $1/msf3/data/meterpreter/"
+echo "cp server/ext_server_msfmap.dll $1/data/meterpreter/"
 cp server/ext_server_msfmap.dll $1/msf3/data/meterpreter/
 
-echo "cp -r server/source $1/msf3/external/source/meterpreter/source/extensions/msfmap"
+echo "cp -r server/source $1/external/source/meterpreter/source/extensions/msfmap"
 cp -r server/source $1/msf3/external/source/meterpreter/source/extensions/msfmap
 
 echo "Done."

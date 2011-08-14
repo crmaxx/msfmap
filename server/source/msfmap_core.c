@@ -138,7 +138,7 @@ int iPHasDirectRoute(unsigned long packedIP) {
 	 * Takes a network byte order packed IP address and iterates over the host route table looking for a local entry that corresponds to it.
 	 *
 	 * Returns 1 on true, the IP is locally attached
-	 * Retunrs 0 on false, the IP is not in a local route
+	 * Returns 0 on false, the IP is not in a local route
 	 * Returns a negative number signifying an error occured
 	 */
 	PMIB_IPFORWARDTABLE pIpForwardTable;
