@@ -169,7 +169,6 @@ class MSFMap < Extension
 		@thread_holder_ptr = 0
 		return
 	end
-		
 	
 	def pack_ips(ips)
 		ips.push(0)

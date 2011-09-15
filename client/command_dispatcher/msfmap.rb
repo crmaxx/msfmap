@@ -28,7 +28,7 @@ class Console::CommandDispatcher::MSFMap
 		}
 	end
 	
-	@@msfmap_version = '0.5'
+	@@msfmap_version = '0.6'
 	@@msfmap_default_num_of_ports = 100
 	
 	@@msfmap_opts = Rex::Parser::Arguments.new(
@@ -128,25 +128,8 @@ class Console::CommandDispatcher::MSFMap
 				total_ports = @@msfmap_default_num_of_ports
 			end
 
-			ip_proto = opts['scan_type'][0,3]
-			services = {}	# services associated-array, indexed by port number
-			nmap_services_file = ::File.join(Msf::Config.install_root, "../share/nmap/nmap-services")
-			if ::File.exists?(nmap_services_file)
-				nmap_services_file_h = ::File.open(nmap_services_file, 'r')
-				begin
-					while (line = nmap_services_file_h.readline)
-						if line[0,1] == '#'
-							next
-						end
-						line = line.split(/\s/, 3)
-						if line[1][-3,3] == ip_proto
-							services[line[1].split('/')[0].to_i] = line[0]
-						end
-					end
-				rescue EOFError	# ruby is stupid
-					nmap_services_file_h.close
-				end
-			else
+			services = get_nmap_services(opts['scan_type'][0,3])	# services associated-array, indexed by port number
+			if services.length == 0
 				print_error("nmap-services Could Not Be Located, Service Name Resolution Has Been Disabled.")	# services will stay empty and every call to .include? will fail
 			end
 		end
@@ -193,6 +176,44 @@ class Console::CommandDispatcher::MSFMap
 
 		client.msfmap.msfmap_cleanup()
 		return true
+	end
+	
+	#
+	# Locate and parse a nmap-services file from a NMap install
+	#
+	def get_nmap_services(ip_proto)
+		nmap_services_check_locations = [
+			'/usr/local/share/nmap/nmapblah-services',
+			'/usr/share/nmap/nmapblah-services',
+			File.join(Msf::Config.install_root, "../share/nmap/nmap-services")
+		]
+		nmap_services_file = nil
+		nmap_services_check_locations.each do |file_location|
+			if ::File.file?(file_location) and ::File.readable?(file_location)
+				nmap_services_file = file_location
+				break
+			end
+		end
+		if not nmap_services_file
+			return {}
+		end
+		
+		services = {}
+		nmap_services_file_h = ::File.open(nmap_services_file, 'r')
+		begin
+			while (line = nmap_services_file_h.readline)
+				if line[0,1] == '#'
+					next
+				end
+				line = line.split(/\s/, 3)
+				if line[1][-3,3] == ip_proto
+					services[line[1].split('/')[0].to_i] = line[0]
+				end
+			end
+		rescue EOFError
+			nmap_services_file_h.close
+		end
+		return services
 	end
 
 	#
