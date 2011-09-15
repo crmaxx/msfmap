@@ -183,8 +183,8 @@ class Console::CommandDispatcher::MSFMap
 	#
 	def get_nmap_services(ip_proto)
 		nmap_services_check_locations = [
-			'/usr/local/share/nmap/nmapblah-services',
-			'/usr/share/nmap/nmapblah-services',
+			'/usr/local/share/nmap/nmap-services',
+			'/usr/share/nmap/nmap-services',
 			File.join(Msf::Config.install_root, "../share/nmap/nmap-services")
 		]
 		nmap_services_file = nil

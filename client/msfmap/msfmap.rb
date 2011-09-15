@@ -115,7 +115,7 @@ class MSFMap < Extension
 			if next_ip == nil
 				break
 			end
-			ipaddrs.push(inet_aton(next_ip))
+			ipaddrs.push(Rex::Socket.addr_aton(next_ip))
 		end
 		ipaddrs = pack_ips(ipaddrs)
 		
@@ -132,7 +132,7 @@ class MSFMap < Extension
 			if next_ip == nil
 				ipaddrs = "\x00\x00\x00\x00"
 			else
-				ipaddrs = pack_ips( [ inet_aton(next_ip) ] )
+				ipaddrs = pack_ips( [ Rex::Socket.addr_aton(next_ip) ] )
 				ips_in_remote_queue += 1
 			end
 
@@ -150,12 +150,13 @@ class MSFMap < Extension
 			end
 			host = response.get_tlv_value(TLV_TYPE_MSFMAP_IPADDRESSES)
 			host = unpack_ips(host)
-			host = inet_ntoa(host[0])
+			host = Rex::Socket.addr_ntoa(host[0])
 			open_ports = response.get_tlv_value(TLV_TYPE_MSFMAP_PORTS_OPEN)
 			open_ports = unpack_ports(open_ports)
 			host_result =	{	'host' => host,
 								'open_ports' => open_ports,
 							}
+			
 			yield [ host_result ]
 		end
 	end
@@ -171,14 +172,18 @@ class MSFMap < Extension
 	end
 	
 	def pack_ips(ips)
-		ips.push(0)
-		ipspacked = ips.pack("N" * ips.length)
+		ips.push("\x00\x00\x00\x00")
+		ipspacked = ips.join('')
 		ips.pop()
 		return ipspacked
 	end
 	
 	def unpack_ips(ips)
-		return ips.unpack("N" * (ips.length / 4))
+		ipsunpacked = Array.new
+		(0..(ips.length - 4)).step(4) do |i|
+			ipsunpacked.push( ips[i..i + 4] )
+		end
+		return ipsunpacked
 	end
 	
 	def pack_ports(ports)
@@ -191,20 +196,6 @@ class MSFMap < Extension
 	
 	def unpack_ports(ports)
 		return ports.unpack("S" * (ports.length / 2))
-	end
-	
-	def inet_aton(ip)
-		nums = ip.split('.').collect{ |i| i.to_i }
-		return (nums[0] << 24) | (nums[1] << 16) | (nums[2] << 8) | (nums[3])
-	end
-
-	def inet_ntoa(int)
-		ipstr = []
-		ipstr.push(((int & 0xff000000) >> 24).to_s)
-		ipstr.push(((int & 0xff0000) >> 16).to_s)
-		ipstr.push(((int & 0xff00) >> 8).to_s)
-		ipstr.push((int & 0xff).to_s)
-		return ipstr.join('.')
 	end
 end
 
