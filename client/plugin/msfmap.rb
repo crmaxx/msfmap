@@ -1,4 +1,5 @@
 require 'rex/socket'
+require 'rex/post/meterpreter/extensions/msfmap/config'
 
 module Msf
 class Plugin::MSFMap < Msf::Plugin	
@@ -50,6 +51,9 @@ class Plugin::MSFMap < Msf::Plugin
 			# of compromised systmes directly attached.  This will return a list of
 			# the sessions that are used by the most common network.  Using the systems
 			# to scan from should yeild accurate and consistent results.
+			# On multi-NIC systems, this will still not gaurentee that the scan will
+			# use the NIC on the "most common" network.
+			# TODO Fix binding for multi-NIC systems
 			networksToSessions = Hash.new
 			networksCounter = Hash.new
 

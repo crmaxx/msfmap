@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 require 'rex/post/meterpreter/packet_response_waiter'
 require 'rex/post/meterpreter/extensions/msfmap/tlv'
 require 'rex/post/meterpreter/extensions/msfmap/constants'
