@@ -26,7 +26,7 @@ if [ ! -d "$1" ]; then
 	echo ""
 	echo "$USAGE"
 	exit 1
-elif [ ! -d "$1/lib" ]; then
+elif [ ! -d "$1/lib/rex" ]; then
 	echo "Invalid Directory"
 	echo ""
 	echo "$USAGE"
@@ -41,8 +41,8 @@ cp client/command_dispatcher/* $1/lib/rex/post/meterpreter/ui/console/command_di
 echo "cp -r client/msfmap $1/lib/rex/post/meterpreter/extensions/"
 cp -r client/msfmap $1/lib/rex/post/meterpreter/extensions/
 
-echo "cp client/plugin/msfmap.rb $1/plugins/msfmap.rb"
-cp client/plugin/msfmap.rb $1/plugins/msfmap.rb
+# echo "cp client/plugin/msfmap.rb $1/plugins/msfmap.rb"
+# cp client/plugin/msfmap.rb $1/plugins/msfmap.rb
 
 echo "cp server/ext_server_msfmap.dll $1/data/meterpreter/"
 cp server/ext_server_msfmap.dll $1/data/meterpreter/

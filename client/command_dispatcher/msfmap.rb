@@ -31,6 +31,7 @@ class Console::CommandDispatcher::MSFMap
 	
 	@@msfmap_version = '0.6'
 	
+	# TODO Should be able to remove this
 	@@msfmap_opts = Rex::Parser::Arguments.new(
 		"-h"			=> [ false, "Print this help summary page." ],
 		"-oN"			=> [ true,	"Output scan in normal format to the given filename." ],
@@ -75,6 +76,9 @@ class Console::CommandDispatcher::MSFMap
 			print_line("Cleaning Up...")
 			client.msfmap.msfmap_cleanup()
 			print_line("Done.")
+			trap("SIGINT") do
+				"DEFAULT"
+			end
 			return true
 		end
 		
@@ -139,6 +143,9 @@ class Console::CommandDispatcher::MSFMap
 		end
 
 		client.msfmap.msfmap_cleanup()
+		trap("SIGINT") do
+			"DEFAULT"
+		end
 		return true
 	end
 

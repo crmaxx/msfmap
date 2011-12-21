@@ -1,0 +1,45 @@
+::::    ::::   ::::::::  :::::::::: ::::    ::::      :::     :::::::::  
++:+:+: :+:+:+ :+:    :+: :+:        +:+:+: :+:+:+   :+: :+:   :+:    :+: 
++:+ +:+:+ +:+ +:+        +:+        +:+ +:+:+ +:+  +:+   +:+  +:+    +:+ 
++#+  +:+  +#+ +#++:++#++ :#::+::#   +#+  +:+  +#+ +#++:++#++: +#++:++#+  
++#+       +#+        +#+ +#+        +#+       +#+ +#+     +#+ +#+        
+#+#       #+# #+#    #+# #+#        #+#       #+# #+#     #+# #+#        
+###       ###  ########  ###        ###       ### ###     ### ###
+
+== Summary ==
+MSFMap provides a port scanner for Meterpreter using a NMap-like
+syntax. It's primary benefits are speed and ease of use while not
+writing anything to disk. MSFMap allows penetration testers to
+rapidly utilize a compromised host to scan internal networks. 
+
+== License ==
+Copyright (C) 2011, SecureState
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+MA 02110-1301, USA.
+
+== About ==
+Author: Spencer McIntyre <smcintyre [at] securestate [dot] com>
+Author Home Page: http://www.securestate.com/
+Project Home Page: http://code.google.com/p/msfmap
+Project Blog: http://blog.securestate.com/?tag=/MSFMap
+
+Please Send Bug Reports To: <smcintyre [at] securestate [dot] com>
+
+== Install ==
+For detailed install information please see the INSTALL file.
+An install.sh shell script is provided to ease installation on
+linux. It takes a single argument of the path to where the
+Metasploit framework has been installed.

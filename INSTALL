@@ -1,0 +1,11 @@
+MSFMap INSTALL
+
+Requirements:
+	The Metasploit Framework
+
+How To Install MSFMap (Linux):
+	# sudo sh install.sh [ path to framework base ]
+	Generic Example:
+		sh install.sh /opt/metasploit3/msf3
+	BackTrack 5 Example:
+		sh install.sh /pentest/exploits/framework3
