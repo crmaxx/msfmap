@@ -95,7 +95,8 @@ class MSFMapConfig
 		nmap_services_check_locations = [
 			'/usr/local/share/nmap/nmap-services',
 			'/usr/share/nmap/nmap-services',
-			File.join(Msf::Config.install_root, "../share/nmap/nmap-services")
+			File.join(Msf::Config.install_root, "../share/nmap/nmap-services"),
+			File.join(Msf::Config.install_root, "../../../nmap/nmap-services") # windows
 		]
 		nmap_services_file = nil
 		nmap_services_check_locations.each do |file_location|
