@@ -9,3 +9,8 @@ How To Install MSFMap (Linux):
 		sh install.sh /opt/metasploit3/msf3
 	BackTrack 5 Example:
 		sh install.sh /pentest/exploits/framework3
+
+How To Install MSFMap (Windows):
+	install.bat [ path to framework base ]
+	Generic Example:
+		install.bat C:\metasploit\msf3
