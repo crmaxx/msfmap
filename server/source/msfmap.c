@@ -266,8 +266,7 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 	return ERROR_SUCCESS;
 }
 
-Command customCommands[] =
-{
+Command customCommands[] = {
 	{ "msfmap_init",
 		{ request_msfmap_init,			{ 0 }, 0},
 		{ EMPTY_DISPATCH_HANDLER				},
@@ -293,8 +292,7 @@ Command customCommands[] =
 /*
  * Initialize the server extension
  */
-DWORD __declspec(dllexport) InitServerExtension(Remote *remote)
-{
+DWORD __declspec(dllexport) InitServerExtension(Remote *remote) {
 	DWORD index;
 
 	hMetSrv = remote->hMetSrv;
@@ -310,8 +308,7 @@ DWORD __declspec(dllexport) InitServerExtension(Remote *remote)
 /*
  * Deinitialize the server extension
  */
-DWORD __declspec(dllexport) DeinitServerExtension(Remote *remote)
-{
+DWORD __declspec(dllexport) DeinitServerExtension(Remote *remote) {
 	DWORD index;
 
 	for (index = 0;

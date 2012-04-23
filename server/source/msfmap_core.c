@@ -19,9 +19,6 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan
 	int iResult = 2;
 	DWORD Err;
 	DWORD retValue = -1;
-	
-	DWORD StartTime = 0;
-	DWORD EndTime = 0;
 
 	sockinfo.sin_family = AF_INET;
 	sockinfo.sin_addr.s_addr = packedIPaddr;
@@ -48,9 +45,7 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan
 			Timeout.tv_sec = (*ScanOptions).connectTimeout_sec;
 			Timeout.tv_usec = (*ScanOptions).connectTimeout_usec;
 
-			StartTime = GetTickCount();
-			iResult = select(0, NULL, &Write, NULL, &Timeout);
-			EndTime = GetTickCount();
+			iResult = select((ConnectSocket + 1), NULL, &Write, &Err, &Timeout);
 			if (iResult == 0) {
 				retValue = 1;
 			} else {
