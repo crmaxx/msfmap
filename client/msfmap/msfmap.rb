@@ -29,6 +29,7 @@ class MSFMap < Extension
 			])
 		@thread_holder_ptr = 0
 		@number_of_threads = 0
+		@last_error = 0
 	end
 	
 	def msfmap_init(opts = {})
@@ -100,6 +101,7 @@ class MSFMap < Extension
 			@thread_holder_ptr = thread_holder
 			return true
 		else
+			@last_error = (error_flags & MSFMAP_RET_ERROR_FLAGS)
 			return false
 		end
 	end
@@ -169,6 +171,10 @@ class MSFMap < Extension
 		response = client.send_request(request)
 		@thread_holder_ptr = 0
 		return
+	end
+	
+	def msfmap_get_last_error()
+		return @last_error
 	end
 	
 	def pack_ips(ips)

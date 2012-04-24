@@ -93,6 +93,7 @@ DWORD tcpSyn(unsigned long packedIPaddr, unsigned short portNum, void *ScanOptio
 DWORD WINAPI scanThread( LPVOID lpParam );
 int iPHasDirectRoute(unsigned long packedIP);
 int getSrcIPforDest(unsigned long destIPaddr, IPAddr *sourceIPaddr);
+int canBindRawTcp(void);
 int arpPing(unsigned long packedIP);
 int icmpPing(unsigned long packedIP);
 LPVOID increaseBuffer(void *currentBuffer, unsigned int currentBufferSize, unsigned int bufferIncrement);

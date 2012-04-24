@@ -341,6 +341,31 @@ int getSrcIPforDest(unsigned long destIPaddr, IPAddr *sourceIPaddr) {
 	return 0;
 }
 
+int canBindRawTcp(void) {
+	/*
+	 * Returns 0 on False, bind() tcp raw sockets not allowed
+	 * Returns 1 on True, bind() tcp raw sockets allowed
+	 */
+	struct sockaddr_in ServerAddr;
+	SOCKET RawSocket = INVALID_SOCKET;
+	DWORD retValue = 0;
+
+	RawSocket = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+	if (RawSocket == INVALID_SOCKET) {
+		return 0;
+	}
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+	ServerAddr.sin_port = htons(1227);
+
+	retValue = bind(RawSocket, (SOCKADDR *)&ServerAddr, sizeof(ServerAddr));
+	closesocket(RawSocket);
+	if (retValue == SOCKET_ERROR) {
+		return 0;
+	}
+	return 1;
+}
+
 int arpPing(unsigned long packedIP) {
 	/*
 	 * Checks ARP cache and thens searchs for an ARP response. Check the MSDN documentation for SendARP for more info

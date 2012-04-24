@@ -28,6 +28,18 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 	portSpecOld = (unsigned short*)packet_get_tlv_value_raw(packet, TLV_TYPE_MSFMAP_PORTS_SPECIFICATION);
 	optionFlags = packet_get_tlv_value_uint(packet, TLV_TYPE_MSFMAP_SCAN_OPTIONS);
 
+	if ((optionFlags & MSFMAP_OPTS_SCAN_TYPE_FLAGS) == MSFMAP_OPTS_SCAN_TYPE_TCP_SYN) {
+		/* use request a SYN scan but it doesn't look like we can do that :( */
+		if (canBindRawTcp() == 0) {
+			returnFlags = (returnFlags | MSFMAP_RET_SCAN_TYPE_ERR);
+			packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, 0);
+			packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, returnFlags);
+			packet_transmit_response(ERROR_SUCCESS, remote, response);
+
+			return ERROR_SUCCESS;
+		}
+	}
+
 	portSpecNew = (unsigned short *)malloc(BUFFER_SIZE);
 	if (portSpecNew == NULL) {
 		returnFlags = (returnFlags | MSFMAP_RET_MEM_ERR);

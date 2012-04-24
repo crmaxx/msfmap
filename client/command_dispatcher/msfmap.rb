@@ -1,5 +1,6 @@
 require 'rex/post/meterpreter'
 require 'rex/post/meterpreter/extensions/msfmap/config'
+require 'rex/post/meterpreter/extensions/msfmap/constants'
 
 module Rex
 module Post
@@ -68,6 +69,15 @@ class Console::CommandDispatcher::MSFMap
 		end
 
 		if not client.msfmap.msfmap_init(msfmapConfig.opts)
+			error = client.msfmap.msfmap_get_last_error()
+			case error
+				when Rex::Post::Meterpreter::Extensions::MSFMap::MSFMAP_RET_MEM_ERR
+					print_error("Insufficient Memmory On Meterpreter Server")
+				when Rex::Post::Meterpreter::Extensions::MSFMap::MSFMAP_RET_SCAN_TYPE_ERR
+					print_error("The Desired Scan Type Is Not Supported")
+				else
+					print_error("Unknown Error Code: #{error}")
+			end
 			print_error("Could Not Initialize MSFMap")
 			return true
 		end
