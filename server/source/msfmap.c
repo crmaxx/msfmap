@@ -76,7 +76,7 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_0_CONNECT_TIMEOUT_USEC;
 			(*ScanOptions).numberOfThreads = TIMING_PROFILE_0_NUMBER_OF_THREADS;
 #if defined ( DEBUG )
-			printf("\nCORE: Setting Timing Profile To 0");
+			printf("CORE: Setting Timing Profile To 0\n");
 #endif
 			break;
 		case MSFMAP_OPTS_TIMING_1:
@@ -85,7 +85,7 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_1_CONNECT_TIMEOUT_USEC;
 			(*ScanOptions).numberOfThreads = TIMING_PROFILE_1_NUMBER_OF_THREADS;
 #if defined ( DEBUG )
-			printf("\nCORE: Setting Timing Profile To 1");
+			printf("CORE: Setting Timing Profile To 1\n");
 #endif
 			break;
 		case MSFMAP_OPTS_TIMING_2:
@@ -94,7 +94,7 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_2_CONNECT_TIMEOUT_USEC;
 			(*ScanOptions).numberOfThreads = TIMING_PROFILE_2_NUMBER_OF_THREADS;
 #if defined ( DEBUG )
-			printf("\nCORE: Setting Timing Profile To 2");
+			printf("CORE: Setting Timing Profile To 2\n");
 #endif
 			break;
 		case MSFMAP_OPTS_TIMING_3:
@@ -103,7 +103,7 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_3_CONNECT_TIMEOUT_USEC;
 			(*ScanOptions).numberOfThreads = TIMING_PROFILE_3_NUMBER_OF_THREADS;
 #if defined ( DEBUG )
-			printf("\nCORE: Setting Timing Profile To 3");
+			printf("CORE: Setting Timing Profile To 3\n");
 #endif
 			break;
 		case MSFMAP_OPTS_TIMING_4:
@@ -112,7 +112,7 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_4_CONNECT_TIMEOUT_USEC;
 			(*ScanOptions).numberOfThreads = TIMING_PROFILE_4_NUMBER_OF_THREADS;
 #if defined ( DEBUG )
-			printf("\nCORE: Setting Timing Profile To 4");
+			printf("CORE: Setting Timing Profile To 4\n");
 #endif
 			break;
 		case MSFMAP_OPTS_TIMING_5:
@@ -121,7 +121,7 @@ DWORD request_msfmap_init(Remote *remote, Packet *packet) {
 			(*ScanOptions).connectTimeout_usec = TIMING_PROFILE_5_CONNECT_TIMEOUT_USEC;
 			(*ScanOptions).numberOfThreads = TIMING_PROFILE_5_NUMBER_OF_THREADS;
 #if defined ( DEBUG )
-			printf("\nCORE: Setting Timing Profile To 5");
+			printf("CORE: Setting Timing Profile To 5\n");
 #endif
 			break;
 	}	
@@ -183,7 +183,7 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 				dwRetVal = WaitForSingleObject(ThreadHolder[threadHolderPos].threadHandle, 10);
 				if (dwRetVal != WAIT_TIMEOUT) {
 #if defined( DEBUG )
-	printf("\nCORE: Thread #%i Returned.", threadHolderPos);
+	printf("CORE: Thread #%i Returned.\n", threadHolderPos);
 #endif
 					break;
 				}
@@ -197,7 +197,7 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 	packet_add_tlv_raw(response, TLV_TYPE_MSFMAP_PORTS_OPEN, ThreadHolder[threadHolderPos].openPortsBuffer, (ThreadHolder[threadHolderPos].openPortsBufferEntries * sizeof(unsigned short)));
 
 #if defined( DEBUG )
-	printf("\nCORE: ReturnFlags = 0x%X", ThreadHolder[threadHolderPos].returnFlags);
+	printf("CORE: ReturnFlags = 0x%X\n", ThreadHolder[threadHolderPos].returnFlags);
 #endif
 	packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, ThreadHolder[threadHolderPos].returnFlags);
 
@@ -225,7 +225,7 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 	unsigned int portSpecEntries = 0;
 
 #if defined ( DEBUG )
-	printf("\nCORE: Cleaning Up...");
+	printf("CORE: Cleaning Up...\n");
 #endif
 
 	(unsigned int)ThreadHolder = packet_get_tlv_value_uint(packet, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION);
@@ -241,7 +241,7 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 
 	// ensure that all threads have returned
 #if defined ( DEBUG )
-	printf("\nCORE: Waiting For Threads To Return...");
+	printf("CORE: Waiting For Threads To Return...\n");
 #endif
 	for (threadHolderPos = 0; threadHolderPos < ThreadHolder[0].scanOptions->numberOfThreads; threadHolderPos++) {
 		if (ThreadHolder[threadHolderPos].threadHandle != NULL) {
@@ -249,7 +249,7 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 		}
 	}
 #if defined ( DEBUG )
-	printf("\nCORE: All Threads Have Returned.");
+	printf("CORE: All Threads Have Returned.\n");
 #endif
 
 	free(portSpec);	// clear and free the rest
@@ -261,7 +261,7 @@ DWORD request_msfmap_cleanup(Remote *remote, Packet *packet) {
 
 	packet_transmit_response(ERROR_SUCCESS, remote, response);
 #if defined ( DEBUG )
-	printf("\nCORE: Clean Up Done.");
+	printf("CORE: Clean Up Done.\n");
 #endif
 	return ERROR_SUCCESS;
 }

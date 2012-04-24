@@ -32,6 +32,7 @@ class MSFMapConfig
 			"-PN"			=> [ false, "Treat all hosts as online -- skip host discovery" ],
 			"-sP"			=> [ false, "Ping Scan - go no further than determining if host is online" ],
 			"-sT"			=> [ false, "TCP Connect() scan" ],
+			"-sS"			=> [ false, "TCP Syn scan" ],
 			"-T<0-5>"		=> [ false, "Set timing template (higher is faster)" ],
 			"--top-ports"	=> [ true, 	"Scan <number> most common ports" ],
 			"-v"			=> [ false, "Increase verbosity level" ]
@@ -75,6 +76,8 @@ class MSFMapConfig
 					self.verbosity += 1
 				when "-sT"
 					self.opts['scan_type'] = 'tcp_connect'
+				when "-sS"
+					self.opts['scan_type'] = 'tcp_syn'
 				when "-sP"
 					self.opts['scan_type'] = 'ping'
 			end

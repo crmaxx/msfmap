@@ -50,6 +50,8 @@ class MSFMap < Extension
 		case scan_type
 			when 'tcp_connect'
 				scan_type = MSFMAP_OPTS_SCAN_TYPE_TCP_CONNECT
+			when 'tcp_syn'
+				scan_type = MSFMAP_OPTS_SCAN_TYPE_TCP_SYN
 			when 'ping'
 				scan_type = MSFMAP_OPTS_SCAN_TYPE_PING
 		end

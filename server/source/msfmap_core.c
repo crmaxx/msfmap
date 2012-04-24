@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <winsock2.h>
 #pragma comment(lib, "Ws2_32.lib")
 #include <ws2tcpip.h>
@@ -67,12 +68,130 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan
 	return retValue;
 }
 
+DWORD tcpSyn(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) {
+	/*
+	 *	Returns 0 on successful connect
+	 *  Returns 1 on successful response but no connect (received RST no need to retry)
+	 *	Returns 2 on failure to connect (network problem)
+	 *	Returns 3 on failure to connect (host problem)
+	 *  Returns 4 on unknown problem
+	 */
+	struct sockaddr_in SockAddr;
+	struct sockaddr_in SenderAddr; /* this is incoming from recvfrom() */
+	struct sockaddr_in ServerAddr;
+	int SenderAddrSz = sizeof(SenderAddr);
+	SOCKET RawSocket = INVALID_SOCKET;
+	DWORD retValue = 0;
+	char sendBuffer[] = "\x02\x04\x05\xb4\x01\x03\x03\x08\x01\x01\x04\x02";
+	char tmpSendBuffer[64];
+	char tmpRecvBuffer[64];
+	int tmpSendSz = 0;
+	int tmpRecvSz = 64;
+	struct tcp_header tcphdr;
+	unsigned long srcAddr;
+	unsigned short chksum = 0;
+	const struct ip_header *parseiphdr;
+	const struct tcp_header *parsetcphdr;
+	/* next 3 are for the timeout operations */
+	fd_set Read;
+	TIMEVAL Timeout;
+
+	srand((unsigned)time(NULL)); /* seed the random value */
+
+	RawSocket = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+	if (RawSocket == INVALID_SOCKET) {
+		return 2;
+	}
+
+	getSrcIPforDest(packedIPaddr, &srcAddr);
+
+	SockAddr.sin_family = AF_INET;
+	SockAddr.sin_addr.s_addr = packedIPaddr;
+	ServerAddr.sin_family = AF_INET;
+	ServerAddr.sin_addr.s_addr = srcAddr;
+	ServerAddr.sin_port = htons(1337);
+
+	memset(&tcphdr, '\0', sizeof(tcphdr));
+	tcphdr.th_sport = htons(1337);
+	tcphdr.th_dport = htons(portNum);
+	tcphdr.th_seq = htonl(rand());
+	tcphdr.th_off = 32;
+	tcphdr.th_f_syn = 1;
+	tcphdr.th_win = htons(WINDOW_SIZE);
+
+	memset(&tmpSendBuffer, '\0', sizeof(tmpSendBuffer));
+
+	memcpy(tmpSendBuffer, &tcphdr, sizeof(tcphdr));
+	memcpy(&tmpSendBuffer[sizeof(tcphdr)], sendBuffer, sizeof(sendBuffer));
+	tmpSendSz = sizeof(tcphdr) + (sizeof(sendBuffer) - 1);
+
+	chksum = tcp_sum_calc(tmpSendSz, (unsigned short *)&srcAddr, (unsigned short *)&packedIPaddr, (unsigned short *)&tmpSendBuffer);
+	tcphdr.th_sum = chksum;
+	memcpy(tmpSendBuffer, &tcphdr, sizeof(tcphdr));
+
+	retValue = bind(RawSocket, (SOCKADDR *)&ServerAddr, sizeof(ServerAddr));
+	if (retValue != 0) {
+		closesocket(RawSocket);
+#if defined ( DEBUG )
+			printf("SCAN: Could Not Bind The Raw Socket\n");
+#endif
+		return 3;
+	}
+
+	retValue = sendto(RawSocket, tmpSendBuffer, tmpSendSz, 0, (SOCKADDR *)&SockAddr, sizeof(SockAddr));
+	if ((retValue == SOCKET_ERROR) || (retValue != tmpSendSz)) {
+		closesocket(RawSocket);
+#if defined ( DEBUG )
+			printf("SCAN: SendTo Failed On The Raw Socket\n");
+#endif
+		return 2;
+	}
+
+	/* start timeout setup */
+	FD_ZERO(&Read);
+	FD_SET(RawSocket, &Read);
+	Timeout.tv_sec = (*ScanOptions).connectTimeout_sec;
+	Timeout.tv_usec = (*ScanOptions).connectTimeout_usec;
+	retValue = select(RawSocket, &Read, NULL, NULL, &Timeout);
+	if (retValue == 0) {
+		closesocket(RawSocket);
+		return 1;
+	} else if (!FD_ISSET(RawSocket, &Read)) {
+		closesocket(RawSocket);
+		return 2;
+	}
+
+	retValue = recvfrom(RawSocket, tmpRecvBuffer, tmpRecvSz, 0, (SOCKADDR *)&SenderAddr, &SenderAddrSz);
+	closesocket(RawSocket);
+	if (retValue == SOCKET_ERROR) {
+		return 3;
+	}
+
+	parseiphdr = (struct ip_header*)(&tmpRecvBuffer);
+	parsetcphdr = (struct tcp_header*)(tmpRecvBuffer + (IP_HL(parseiphdr) * 4));
+
+	retValue = 3; /* this should be over written by 1 or 2 */
+	if ((parsetcphdr->th_sport == tcphdr.th_dport) && (parsetcphdr->th_dport == tcphdr.th_sport) && (ntohl(parsetcphdr->th_ack) == (ntohl(tcphdr.th_seq) + 1))) {
+		if ((parsetcphdr->th_f_ack == 1) && (parsetcphdr->th_f_rst == 0)) {
+			retValue = 0;
+		} else if (parsetcphdr->th_f_rst == 1) {
+			retValue = 1;
+		} else {
+			retValue = 2;
+		}
+	} else {
+		retValue = 2;
+	}
+	return retValue;
+}
+
 DWORD WINAPI scanThread( LPVOID lpParam) {
 	msfmap_thread_info *ThreadInfo = (msfmap_thread_info *)lpParam;
 	unsigned short currentPort = 0; // Frame of reference for portSpec
 	int pingRetVal = 0;
 	int pingCounter = 0;
 	int scanType = ((*ThreadInfo).scanOptions->optionFlags & MSFMAP_OPTS_SCAN_TYPE_FLAGS);
+	DWORD (*scanFunction)(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) = NULL;
 
 	// start by checking if we should continue
 	if (iPHasDirectRoute((*ThreadInfo).targetIP) == 1) {
@@ -110,8 +229,17 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 		return 0;
 	}
 
+	switch (scanType) {
+		case MSFMAP_OPTS_SCAN_TYPE_TCP_CONNECT: { scanFunction = &tcpConnect; break; }
+		case MSFMAP_OPTS_SCAN_TYPE_TCP_SYN: { scanFunction = &tcpSyn; break; }
+		default: {
+			(*ThreadInfo).returnFlags = ((*ThreadInfo).returnFlags | MSFMAP_RET_SCAN_TYPE_ERR);
+			return 0;
+		}
+	}
+
 	while ((*ThreadInfo).portSpec[currentPort] != 0) {
-		if (tcpConnect((*ThreadInfo).targetIP, (*ThreadInfo).portSpec[currentPort], (*ThreadInfo).scanOptions) == 0) {
+		if (scanFunction((*ThreadInfo).targetIP, (*ThreadInfo).portSpec[currentPort], (*ThreadInfo).scanOptions) == 0) {
 			if (((*ThreadInfo).openPortsBufferEntries * 2) >= (*ThreadInfo).openPortsBufferSize) {
 				(*ThreadInfo).openPortsBuffer = (unsigned short *)increaseBuffer((*ThreadInfo).openPortsBuffer, (*ThreadInfo).openPortsBufferSize, BUFFER_SIZE_INCREMENT);
 				if ((*ThreadInfo).openPortsBuffer == NULL) {
@@ -167,6 +295,50 @@ int iPHasDirectRoute(unsigned long packedIP) {
 		free(pIpForwardTable);
 		return -3;
 	}
+}
+
+int getSrcIPforDest(unsigned long destIPaddr, IPAddr *sourceIPaddr) {
+	int i;
+	DWORD dwRetVal = NO_ERROR;
+	DWORD dwBestIf = 0;
+	IPAddr dwDestAddr;
+	PMIB_IPADDRTABLE pIPAddrTable;
+	DWORD dwSize = 0;
+	IN_ADDR IPAddr;
+	dwDestAddr = destIPaddr;
+
+	dwRetVal = GetBestInterface(dwDestAddr, &dwBestIf);
+	if (dwRetVal != NO_ERROR) {
+		return 1;
+	}
+	pIPAddrTable = (MIB_IPADDRTABLE *)malloc(sizeof(MIB_IPADDRTABLE));
+	if (pIPAddrTable) {
+		if (GetIpAddrTable(pIPAddrTable, &dwSize, 0) == ERROR_INSUFFICIENT_BUFFER) {
+			free(pIPAddrTable);
+			pIPAddrTable = (MIB_IPADDRTABLE *) malloc(dwSize);
+		}
+		if (pIPAddrTable == NULL) {
+			return 1;
+		}
+	}
+
+	if ((dwRetVal = GetIpAddrTable(pIPAddrTable, &dwSize, 0)) != NO_ERROR) { 
+		return 1;
+	}
+
+	for (i=0; i < (int)pIPAddrTable->dwNumEntries; i++) {
+		if (pIPAddrTable->table[i].dwIndex == dwBestIf) {
+			IPAddr.S_un.S_addr = (u_long) pIPAddrTable->table[i].dwAddr;
+			*sourceIPaddr = IPAddr.S_un.S_addr;
+			break;
+		}
+	}
+
+	if (pIPAddrTable) {
+		free(pIPAddrTable);
+		pIPAddrTable = NULL;
+	}
+	return 0;
 }
 
 int arpPing(unsigned long packedIP) {
@@ -235,4 +407,42 @@ LPVOID increaseBuffer(void *currentBuffer, unsigned int currentBufferSize, unsig
 	memcpy(newBuffer, currentBuffer, currentBufferSize);
 	free(currentBuffer);
 	return newBuffer;
+}
+
+unsigned short tcp_sum_calc(unsigned short len_tcp, unsigned short src_addr[],unsigned short dest_addr[], unsigned short buff[]) {
+	unsigned char prot_tcp = 6;
+	unsigned long sum;
+	int nleft;
+	unsigned short *w;
+	 
+	sum = 0;
+	nleft = len_tcp;
+	w = buff;
+	
+	/* calculate the checksum for the tcp header and payload */
+	while(nleft > 1) {
+		sum += *w++;
+		nleft -= 2;
+	}
+	
+	/* if nleft is 1 there ist still on byte left. We add a padding byte (0xFF) to build a 16bit word */
+	if(nleft>0) {
+		sum += *w&ntohs(0xFF00); /* Thanks to Dalton */
+	}
+	
+	/* add the pseudo header */
+	sum += src_addr[0];
+	sum += src_addr[1];
+	sum += dest_addr[0];
+	sum += dest_addr[1];
+	sum += htons(len_tcp);
+	sum += htons(prot_tcp);
+	 
+	// keep only the last 16 bits of the 32 bit calculated sum and add the carries
+	sum = (sum >> 16) + (sum & 0xFFFF);
+	sum += (sum >> 16);
+	
+	// Take the one's complement of sum
+	sum = ~sum;
+	return ((unsigned short) sum);
 }
