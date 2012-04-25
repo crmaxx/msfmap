@@ -149,7 +149,7 @@ class Console::CommandDispatcher::MSFMap
 		elapsed_time = (end_time - start_time).round(2)
 		print_line("MSFMap done: #{ip_range_walker.length} IP address (#{scan_results_length} hosts up) scanned in #{elapsed_time} seconds\n")
 		if msfmapConfig.out_normal
-			msfmapConfig.out_normal.write("MSFMap done: #{ip_range_walker.length} IP address (#{scan_results_length} hosts up) scanned in #{elapsed_time} seconds\n")
+			msfmapConfig.out_normal.write("MSFMap done: #{ip_range_walker.length} IP addresses (#{scan_results_length} hosts up) scanned in #{elapsed_time} seconds\n")
 			msfmapConfig.out_normal.close
 		end
 

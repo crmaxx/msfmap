@@ -112,17 +112,29 @@ class MSFMap < Extension
 		# shits init'ed now run shit
 		# build the first list of IPs to go
 		ipaddrs = []
+		ip_local_queue = []
+		ip_info_holder = {}
 		self.number_of_threads.times do |i|
 			next_ip = rex_ip_range.next_ip
 			if next_ip == nil
 				break
 			end
+			ip_local_queue.push(next_ip)
 			ipaddrs.push(Rex::Socket.addr_aton(next_ip))
 		end
 		ipaddrs = pack_ips(ipaddrs)
 		
 		ips_in_remote_queue = ((ipaddrs.length / 4) - 1)	# minus one for the null trailer
 		while ips_in_remote_queue > 0
+			if ip_info_holder.keys.include?(ip_local_queue[0])
+				host_result = ip_info_holder.delete(ip_local_queue[0])
+				ip_local_queue.shift
+				if host_result
+					yield [ host_result ]
+				end
+				next
+			end
+			
 			request = Packet.create_request('msfmap_core')
 			request.add_tlv(TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, @thread_holder_ptr)
 			request.add_tlv(TLV_TYPE_MSFMAP_IPADDRESSES, ipaddrs)
@@ -134,11 +146,15 @@ class MSFMap < Extension
 			if next_ip == nil
 				ipaddrs = "\x00\x00\x00\x00"
 			else
+				ip_local_queue.push(next_ip)
 				ipaddrs = pack_ips( [ Rex::Socket.addr_aton(next_ip) ] )
 				ips_in_remote_queue += 1
 			end
 
 			return_flags = response.get_tlv_value(TLV_TYPE_MSFMAP_RETURN_FLAGS)
+			host = response.get_tlv_value(TLV_TYPE_MSFMAP_IPADDRESSES)
+			host = unpack_ips(host)
+			host = Rex::Socket.addr_ntoa(host[0])
 			if ((return_flags & MSFMAP_RET_HOST_UP) == 0) or ((return_flags & MSFMAP_RET_ERROR_FLAGS) != 0)
 				if (return_flags & MSFMAP_RET_ERROR_FLAGS) != 0
 					puts ""
@@ -148,17 +164,24 @@ class MSFMap < Extension
 					puts ""
 					return
 				end
+				if host == ip_local_queue[0]
+					ip_local_queue.shift
+				else
+					ip_info_holder[host] = nil
+				end
 				next	# host isn't up
 			end
-			host = response.get_tlv_value(TLV_TYPE_MSFMAP_IPADDRESSES)
-			host = unpack_ips(host)
-			host = Rex::Socket.addr_ntoa(host[0])
 			open_ports = response.get_tlv_value(TLV_TYPE_MSFMAP_PORTS_OPEN)
 			open_ports = unpack_ports(open_ports)
 			host_result =	{	'host' => host,
 								'open_ports' => open_ports,
 							}
-			
+			if host == ip_local_queue[0]
+				ip_local_queue.shift
+			else
+				ip_info_holder[host] = host_result
+				next
+			end
 			yield [ host_result ]
 		end
 	end
