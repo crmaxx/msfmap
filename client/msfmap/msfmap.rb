@@ -184,6 +184,16 @@ class MSFMap < Extension
 			end
 			yield [ host_result ]
 		end
+		
+		while ip_local_queue.length > 0
+			ip_addr = ip_local_queue.shift
+			if ip_info_holder.keys.include?(ip_addr)
+				host_result = ip_info_holder.delete(ip_addr)
+				if host_result
+					yield [ host_result ]
+				end
+			end
+		end
 	end
 	
 	def msfmap_cleanup()
