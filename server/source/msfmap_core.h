@@ -11,6 +11,8 @@
 #define NUMBER_OF_THREADS 16
 #define WINDOW_SIZE 8192
 #define CALCULATE_SIZE_OF_THREAD_HOLDER (sizeof(msfmap_thread_info) * (*ScanOptions).numberOfThreads)
+#define RAND_PORT_MAX 55000
+#define RAND_PORT_MIN 40000
 #define IP_HL(ip)	(((ip)->ip_vhl) & 0x0f)
 #define IP_V(ip)	(((ip)->ip_vhl) >> 4)
 
@@ -94,6 +96,7 @@ DWORD WINAPI scanThread( LPVOID lpParam );
 int iPHasDirectRoute(unsigned long packedIP);
 int getSrcIPforDest(unsigned long destIPaddr, IPAddr *sourceIPaddr);
 int canBindRawTcp(void);
+void shufflePorts(unsigned short *originalPortList, unsigned short **newPortList);
 int arpPing(unsigned long packedIP);
 int icmpPing(unsigned long packedIP);
 LPVOID increaseBuffer(void *currentBuffer, unsigned int currentBufferSize, unsigned int bufferIncrement);

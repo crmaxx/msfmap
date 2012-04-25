@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <time.h>
 #include <winsock2.h>
 #pragma comment(lib, "Ws2_32.lib")
 #include <ws2tcpip.h>
@@ -89,6 +88,7 @@ DWORD tcpSyn(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_opt
 	int tmpRecvSz = 64;
 	struct tcp_header tcphdr;
 	unsigned long srcAddr;
+	unsigned short srcPort;
 	unsigned short chksum = 0;
 	const struct ip_header *parseiphdr;
 	const struct tcp_header *parsetcphdr;
@@ -96,23 +96,22 @@ DWORD tcpSyn(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_opt
 	fd_set Read;
 	TIMEVAL Timeout;
 
-	srand((unsigned)time(NULL)); /* seed the random value */
-
 	RawSocket = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
 	if (RawSocket == INVALID_SOCKET) {
 		return 2;
 	}
 
 	getSrcIPforDest(packedIPaddr, &srcAddr);
+	srcPort = (unsigned short)((rand() % (RAND_PORT_MAX - RAND_PORT_MIN)) + RAND_PORT_MIN);
 
 	SockAddr.sin_family = AF_INET;
 	SockAddr.sin_addr.s_addr = packedIPaddr;
 	ServerAddr.sin_family = AF_INET;
 	ServerAddr.sin_addr.s_addr = srcAddr;
-	ServerAddr.sin_port = htons(1337);
+	ServerAddr.sin_port = htons(srcPort);
 
 	memset(&tcphdr, '\0', sizeof(tcphdr));
-	tcphdr.th_sport = htons(1337);
+	tcphdr.th_sport = htons(srcPort);
 	tcphdr.th_dport = htons(portNum);
 	tcphdr.th_seq = htonl(rand());
 	tcphdr.th_off = 32;
@@ -192,6 +191,7 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 	int pingCounter = 0;
 	int scanType = ((*ThreadInfo).scanOptions->optionFlags & MSFMAP_OPTS_SCAN_TYPE_FLAGS);
 	DWORD (*scanFunction)(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) = NULL;
+	unsigned short *shuffledPortList = NULL;
 
 	// start by checking if we should continue
 	if (iPHasDirectRoute((*ThreadInfo).targetIP) == 1) {
@@ -238,20 +238,31 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 		}
 	}
 
-	while ((*ThreadInfo).portSpec[currentPort] != 0) {
-		if (scanFunction((*ThreadInfo).targetIP, (*ThreadInfo).portSpec[currentPort], (*ThreadInfo).scanOptions) == 0) {
+	shufflePorts((*ThreadInfo).portSpec, &shuffledPortList);
+	if (shuffledPortList == NULL) {
+		shuffledPortList = (*ThreadInfo).portSpec;	/* see that, that's fault toleranoce */
+	}
+
+	while (shuffledPortList[currentPort] != 0) {
+		if (scanFunction((*ThreadInfo).targetIP, shuffledPortList[currentPort], (*ThreadInfo).scanOptions) == 0) {
 			if (((*ThreadInfo).openPortsBufferEntries * 2) >= (*ThreadInfo).openPortsBufferSize) {
 				(*ThreadInfo).openPortsBuffer = (unsigned short *)increaseBuffer((*ThreadInfo).openPortsBuffer, (*ThreadInfo).openPortsBufferSize, BUFFER_SIZE_INCREMENT);
 				if ((*ThreadInfo).openPortsBuffer == NULL) {
 					(*ThreadInfo).returnFlags = ((*ThreadInfo).returnFlags | MSFMAP_RET_MEM_ERR);
+					if (shuffledPortList != (*ThreadInfo).portSpec) {
+						free(shuffledPortList);
+					}
 					return 0;
 				}
 				(*ThreadInfo).openPortsBufferSize += BUFFER_SIZE_INCREMENT;
 			}
-			(*ThreadInfo).openPortsBuffer[(*ThreadInfo).openPortsBufferEntries] = (*ThreadInfo).portSpec[currentPort];
+			(*ThreadInfo).openPortsBuffer[(*ThreadInfo).openPortsBufferEntries] = shuffledPortList[currentPort];
 			(*ThreadInfo).openPortsBufferEntries++;
 		}
 		currentPort++;
+	}
+	if (shuffledPortList != (*ThreadInfo).portSpec) {
+		free(shuffledPortList);
 	}
 	return 0;
 }
@@ -364,6 +375,40 @@ int canBindRawTcp(void) {
 		return 0;
 	}
 	return 1;
+}
+
+void shufflePorts(unsigned short *originalPortList, unsigned short **retPortList) {
+	/* if we couldn't malloc the necessary amount of memory newPortList will be NULL so check it! */
+	/* this is not crypto graphically secure but it gets the job done */
+	/* don't forget to free the block when done with it */
+	unsigned int numberOfPorts = 0;
+	unsigned int currentPort = 0;
+	unsigned int k = 0;
+	unsigned short tmpPortHolder = 0;
+	unsigned short *newPortList = NULL;
+
+	while (originalPortList[currentPort] != 0) {
+		numberOfPorts++;
+		currentPort++;
+	}
+
+	newPortList = (unsigned short *)malloc((sizeof(unsigned short) * numberOfPorts) + 1);
+	*retPortList = newPortList;
+	if (newPortList == NULL) {
+		return;
+	}
+	memcpy(newPortList, originalPortList, (sizeof(unsigned short) * numberOfPorts));
+	newPortList[numberOfPorts] = 0;
+	currentPort = 0;
+
+	while (originalPortList[currentPort] != 0) {
+		k = (rand() % (numberOfPorts - currentPort));
+		tmpPortHolder = newPortList[currentPort];
+		newPortList[currentPort] = newPortList[k];
+		newPortList[k] = tmpPortHolder;
+		currentPort++;
+	}
+	return;
 }
 
 int arpPing(unsigned long packedIP) {
