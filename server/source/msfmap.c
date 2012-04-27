@@ -195,7 +195,7 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 			if (ThreadHolder[threadHolderPos].threadHandle != NULL) {
 				dwRetVal = WaitForSingleObject(ThreadHolder[threadHolderPos].threadHandle, 10);
 				if (dwRetVal != WAIT_TIMEOUT) {
-#if defined( DEBUG )
+#if defined ( DEBUG )
 	printf("CORE: Thread #%i Returned.\n", threadHolderPos);
 #endif
 					break;
@@ -209,7 +209,7 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 	packet_add_tlv_raw(response, TLV_TYPE_MSFMAP_IPADDRESSES, &(ThreadHolder[threadHolderPos].targetIP), sizeof(unsigned long));	// only responds with the first one
 	packet_add_tlv_raw(response, TLV_TYPE_MSFMAP_PORTS_OPEN, ThreadHolder[threadHolderPos].openPortsBuffer, (ThreadHolder[threadHolderPos].openPortsBufferEntries * sizeof(unsigned short)));
 
-#if defined( DEBUG )
+#if defined ( DEBUG )
 	printf("CORE: ReturnFlags = 0x%X\n", ThreadHolder[threadHolderPos].returnFlags);
 #endif
 	packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, ThreadHolder[threadHolderPos].returnFlags);

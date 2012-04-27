@@ -30,7 +30,7 @@ class Console::CommandDispatcher::MSFMap
 		}
 	end
 	
-	@@msfmap_version = '0.1.0'
+	@@msfmap_version = '0.1.1'
 	
 	# TODO Should be able to remove this
 	@@msfmap_opts = Rex::Parser::Arguments.new(
