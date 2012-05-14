@@ -37,6 +37,7 @@ class MSFMapConfig
 			"--top-ports"	=> [ true, 	"Scan <number> most common ports" ],
 			"-v"			=> [ false, "Increase verbosity level" ]
 		)
+		self.verbosity = 0
 	end
 	
 	def parse(args)
