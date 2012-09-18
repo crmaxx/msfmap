@@ -27,13 +27,13 @@ class MSFMap < Extension
 					'ext'	=> self
 				},
 			])
-		@thread_holder_ptr = 0
+		@thread_holder_ptr = nil
 		@number_of_threads = 0
 		@last_error = 0
 	end
 	
 	def msfmap_init(opts = {})
-		return if @thread_holder_ptr != 0
+		return if @thread_holder_ptr != nil
 		# init shit here
 		if opts.include?('ports')
 			ports = opts['ports']
@@ -107,7 +107,7 @@ class MSFMap < Extension
 	end
 
 	def msfmap_core(rex_ip_range)
-		return if @thread_holder_ptr == 0
+		return if @thread_holder_ptr == nil
 		
 		# shits init'ed now run shit
 		# build the first list of IPs to go
@@ -171,8 +171,12 @@ class MSFMap < Extension
 				end
 				next	# host isn't up
 			end
-			open_ports = response.get_tlv_value(TLV_TYPE_MSFMAP_PORTS_OPEN)
+			open_ports = (response.get_tlv_value(TLV_TYPE_MSFMAP_PORTS_OPEN) or "")
 			open_ports = unpack_ports(open_ports)
+			client.framework.db.report_host(:host => host)
+			open_ports.each do |port|
+				client.framework.db.report_service(:host => host, :port => port)
+			end
 			host_result =	{	'host' => host,
 								'open_ports' => open_ports,
 							}
@@ -197,12 +201,12 @@ class MSFMap < Extension
 	end
 	
 	def msfmap_cleanup()
-		return if @thread_holder_ptr == 0
+		return if @thread_holder_ptr == nil
 
 		request = Packet.create_request('msfmap_cleanup')
 		request.add_tlv(TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, @thread_holder_ptr)
 		response = client.send_request(request)
-		@thread_holder_ptr = 0
+		@thread_holder_ptr = nil
 		return
 	end
 	

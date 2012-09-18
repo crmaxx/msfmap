@@ -50,7 +50,7 @@ class MSFMapConfig
 				val = args[args.index(opt) + 1]
 				if val =~ /^[0-9]+$/
 					val = val.to_i
-					if not (1 < val and val < 1000)
+					if not (1 < val and val <= 1000)
 						self.last_error = "--top-ports should be an integer between 1 and 1000"
 						return false
 					end
