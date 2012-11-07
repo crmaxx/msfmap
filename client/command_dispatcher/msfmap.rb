@@ -32,22 +32,7 @@ class Console::CommandDispatcher::MSFMap
 	
 	@@msfmap_version = '0.1.1'
 	
-	# TODO Should be able to remove this
-	@@msfmap_opts = Rex::Parser::Arguments.new(
-		"-h"			=> [ false, "Print this help summary page." ],
-		"-oN"			=> [ true,	"Output scan in normal format to the given filename." ],
-		"-p" 			=> [ true,	"Only scan specified ports" ],
-		"-PN"			=> [ false, "Treat all hosts as online -- skip host discovery" ],
-		"-sP"			=> [ false, "Ping Scan - go no further than determining if host is online" ],
-		"-sT"			=> [ false, "TCP Connect() scan" ],
-		"-sS"			=> [ false, "TCP Syn scan" ],
-		"-T<0-5>"		=> [ false, "Set timing template (higher is faster)" ],
-		"--top-ports"	=> [ true, 	"Scan <number> most common ports" ],
-		"-v"			=> [ false, "Increase verbosity level" ]
-	)
-	
 	def cmd_msfmap(*args)
-		# C taught me to define shit here
 		verbosity = 0
 		out_normal = nil
 		opts = {}	# next lines define scan defaults
@@ -66,6 +51,7 @@ class Console::CommandDispatcher::MSFMap
 		ip_range_walker = Rex::Socket::RangeWalker.new(args.pop())
 		if not msfmapConfig.parse(args)
 			print_error(msfmapConfig.last_error)
+			return true
 		end
 
 		if not client.msfmap.msfmap_init(msfmapConfig.opts)
@@ -147,9 +133,9 @@ class Console::CommandDispatcher::MSFMap
 		
 		end_time = Time.now
 		elapsed_time = (end_time - start_time).round(2)
-		print_line("MSFMap done: #{ip_range_walker.length} IP address (#{scan_results_length} hosts up) scanned in #{elapsed_time} seconds\n")
+		print_line("MSFMap done: #{ip_range_walker.length} IP address#{"es" if ip_range_walker.length > 1} (#{scan_results_length} host#{"s" if scan_results_length > 1 or scan_results_length == 0} up) scanned in #{elapsed_time} seconds\n")
 		if msfmapConfig.out_normal
-			msfmapConfig.out_normal.write("MSFMap done: #{ip_range_walker.length} IP addresses (#{scan_results_length} hosts up) scanned in #{elapsed_time} seconds\n")
+			msfmapConfig.out_normal.write("MSFMap done: #{ip_range_walker.length} IP address#{"es" if ip_range_walker.length > 1} (#{scan_results_length} host#{"s" if scan_results_length > 1 or scan_results_length == 0} up) scanned in #{elapsed_time} seconds\n")
 			msfmapConfig.out_normal.close
 		end
 

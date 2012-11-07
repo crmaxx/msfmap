@@ -67,7 +67,9 @@ class MSFMapConfig
 				when "-oN"
 					self.out_normal = ::File.open(val, "w")
 				when "-p"
-					if not val.match(/\d((-|,)\d)*$/)
+					if val == "-"
+						self.opts['ports'] = Rex::Socket.portspec_crack("1-65535")
+					elsif not val.match(/\d((-|,)\d)*$/)
 						self.last_error = "Invalid Port Specification."
 						return false
 					else
