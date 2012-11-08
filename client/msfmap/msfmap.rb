@@ -34,7 +34,8 @@ class MSFMap < Extension
 
 	def msfmap_init(opts = {})
 		return if @thread_holder_ptr != nil
-		# init shit here
+		@last_error = 0
+
 		if opts.include?('ports')
 			ports = opts['ports']
 		elsif opts.include?('ports-top')
@@ -107,7 +108,8 @@ class MSFMap < Extension
 	end
 
 	def msfmap_core(rex_ip_range)
-		return if @thread_holder_ptr == nil
+		return false if @thread_holder_ptr == nil
+		@last_error = 0
 
 		# shits init'ed now run shit
 		# build the first list of IPs to go
@@ -157,12 +159,8 @@ class MSFMap < Extension
 			host = Rex::Socket.addr_ntoa(host[0])
 			if ((return_flags & MSFMAP_RET_HOST_UP) == 0) or ((return_flags & MSFMAP_RET_ERROR_FLAGS) != 0)
 				if (return_flags & MSFMAP_RET_ERROR_FLAGS) != 0
-					puts ""
-					puts "An Error Occured In The Remote Scan Thread"
-					puts "\tComplete Flags: 0x#{return_flags.to_s(16)}"
-					puts "\tError Flags:    0x#{(return_flags & MSFMAP_RET_ERROR_FLAGS).to_s(16)}"
-					puts ""
-					return
+					@last_error = (return_flags & MSFMAP_RET_ERROR_FLAGS)
+					return false
 				end
 				if host == ip_local_queue[0]
 					ip_local_queue.shift
@@ -198,10 +196,12 @@ class MSFMap < Extension
 				end
 			end
 		end
+		return true
 	end
 
 	def msfmap_cleanup()
 		return if @thread_holder_ptr == nil
+		@last_error = 0
 
 		request = Packet.create_request('msfmap_cleanup')
 		request.add_tlv(TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, @thread_holder_ptr)

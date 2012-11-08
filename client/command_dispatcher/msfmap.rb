@@ -131,6 +131,9 @@ class Console::CommandDispatcher::MSFMap
 				end
 			end
 		end
+		if client.msfmap.msfmap_get_last_error != 0
+			print_error("Scan Failed With Error Code: #{client.msfmap.msfmap_get_last_error}")
+		end
 
 		end_time = Time.now
 		elapsed_time = (end_time - start_time).round(2)
