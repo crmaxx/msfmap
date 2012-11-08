@@ -9,15 +9,14 @@
 
 DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) {
 	/*
-	 *	Returns 0 on successful connect
-	 *	Returns 1 on failure to connect (network problem)
-	 *	Returns 2 on failure to connect (host problem)
+	 *  Returns 0 on successful connect
+	 *  Returns 1 on failure to connect (network problem)
+	 *  Returns 2 on failure to connect (host problem)
 	 */
 	struct sockaddr_in sockinfo;
 	SOCKET ConnectSocket = INVALID_SOCKET;
 	unsigned long NonBlk = 1;
 	int iResult = 2;
-	DWORD Err;
 	DWORD retValue = -1;
 
 	sockinfo.sin_family = AF_INET;
@@ -29,7 +28,7 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan
 		return 2;
 	}
 	ioctlsocket(ConnectSocket, FIONBIO, &NonBlk);
-	
+
 	iResult = connect(ConnectSocket, (SOCKADDR*) &sockinfo, sizeof(sockinfo));
 	if (iResult == SOCKET_ERROR) {
 		if (WSAGetLastError() == WSAEWOULDBLOCK) {
@@ -69,10 +68,10 @@ DWORD tcpConnect(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan
 
 DWORD tcpSyn(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) {
 	/*
-	 *	Returns 0 on successful connect
+	 *  Returns 0 on successful connect
 	 *  Returns 1 on successful response but no connect (received RST no need to retry)
-	 *	Returns 2 on failure to connect (network problem)
-	 *	Returns 3 on failure to connect (host problem)
+	 *  Returns 2 on failure to connect (network problem)
+	 *  Returns 3 on failure to connect (host problem)
 	 *  Returns 4 on unknown problem
 	 */
 	struct sockaddr_in SockAddr;
@@ -186,14 +185,14 @@ DWORD tcpSyn(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_opt
 
 DWORD WINAPI scanThread( LPVOID lpParam) {
 	msfmap_thread_info *ThreadInfo = (msfmap_thread_info *)lpParam;
-	unsigned short currentPort = 0; // Frame of reference for portSpec
+	unsigned short currentPort = 0; /* Frame of reference for portSpec */
 	int pingRetVal = 0;
 	int pingCounter = 0;
 	int scanType = ((*ThreadInfo).scanOptions->optionFlags & MSFMAP_OPTS_SCAN_TYPE_FLAGS);
 	DWORD (*scanFunction)(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) = NULL;
 	unsigned short *shuffledPortList = NULL;
 
-	// start by checking if we should continue
+	/* start by checking if we should continue */
 	if (iPHasDirectRoute((*ThreadInfo).targetIP) == 1) {
 		for (pingCounter = 0; pingCounter < (*ThreadInfo).scanOptions->pingRetries; pingCounter++) {
 			pingRetVal = arpPing((*ThreadInfo).targetIP);
@@ -202,7 +201,7 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 			}
 		}
 		if (pingRetVal != 1) {
-			return 0;	// host is on our LAN, but is not responding to arps. don't bother scanning.
+			return 0;	/* host is on our LAN, but is not responding to arps. don't bother scanning. */
 		}
 	} else if ((*ThreadInfo).scanOptions->optionFlags & MSFMAP_OPTS_PING) {
 		for (pingCounter = 0; pingCounter < (*ThreadInfo).scanOptions->pingRetries; pingCounter++) {
@@ -220,7 +219,7 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 		return 0;
 	}
 
-	// next four are for recording open ports
+	/* next four are for recording open ports */
 	(*ThreadInfo).openPortsBufferEntries = 0;
 	(*ThreadInfo).openPortsBufferSize = BUFFER_SIZE;
 	(*ThreadInfo).openPortsBuffer = (unsigned short *)malloc(BUFFER_SIZE);
@@ -269,11 +268,11 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 
 int iPHasDirectRoute(unsigned long packedIP) {
 	/*
-	 * Takes a network byte order packed IP address and iterates over the host route table looking for a local entry that corresponds to it.
+	 *  Takes a network byte order packed IP address and iterates over the host route table looking for a local entry that corresponds to it.
 	 *
-	 * Returns 1 on true, the IP is locally attached
-	 * Returns 0 on false, the IP is not in a local route
-	 * Returns a negative number signifying an error occured
+	 *  Returns 1 on true, the IP is locally attached
+	 *  Returns 0 on false, the IP is not in a local route
+	 *  Returns a negative number signifying an error occured
 	 */
 	PMIB_IPFORWARDTABLE pIpForwardTable;
 	DWORD dwSize = 0;
@@ -296,12 +295,12 @@ int iPHasDirectRoute(unsigned long packedIP) {
 			if (pIpForwardTable->table[i].dwForwardType == MIB_IPROUTE_TYPE_DIRECT) {
 				if ((pIpForwardTable->table[i].dwForwardDest & pIpForwardTable->table[i].dwForwardMask) == (packedIP & pIpForwardTable->table[i].dwForwardMask)) {
 					free(pIpForwardTable);
-					return 1;	// this ip matches a network and subnet mask that is marked as MIB_IPROUTE_TYPE_DIRCT
+					return 1;	/* this ip matches a network and subnet mask that is marked as MIB_IPROUTE_TYPE_DIRCT */
 				}
 			}
 		}
 		free(pIpForwardTable);
-		return 0;	// the ip didn't match anything so it's not on our LAN
+		return 0;	/* the ip didn't match anything so it's not on our LAN */
 	} else {
 		free(pIpForwardTable);
 		return -3;
@@ -354,8 +353,8 @@ int getSrcIPforDest(unsigned long destIPaddr, IPAddr *sourceIPaddr) {
 
 int canBindRawTcp(void) {
 	/*
-	 * Returns 0 on False, bind() tcp raw sockets not allowed
-	 * Returns 1 on True, bind() tcp raw sockets allowed
+	 *  Returns 0 on False, bind() tcp raw sockets not allowed
+	 *  Returns 1 on True, bind() tcp raw sockets allowed
 	 */
 	struct sockaddr_in ServerAddr;
 	SOCKET RawSocket = INVALID_SOCKET;
@@ -413,11 +412,11 @@ void shufflePorts(unsigned short *originalPortList, unsigned short **retPortList
 
 int arpPing(unsigned long packedIP) {
 	/*
-	 * Checks ARP cache and thens searchs for an ARP response. Check the MSDN documentation for SendARP for more info
+	 *  Checks ARP cache and thens searchs for an ARP response. Check the MSDN documentation for SendARP for more info
 	 * 
-	 * Returns 1 on true, the IP has a valid ARP entry
-	 * Retunrs 0 on false, the IP does not have a valid ARP entry
-	 * Returns a negative number signifying an error occured
+	 *  Returns 1 on true, the IP has a valid ARP entry
+	 *  Retunrs 0 on false, the IP does not have a valid ARP entry
+	 *  Returns a negative number signifying an error occured
 	 */
 	DWORD dwRetVal;
 	IPAddr DestIp = 0;
@@ -437,11 +436,11 @@ int arpPing(unsigned long packedIP) {
 
 int icmpPing(unsigned long packedIP) {
 	/* 
-	 * Sends an ICMP Echo request.
+	 *  Sends an ICMP Echo request.
 	 * 
-	 * Returns 1 on successful host resposne
-	 * Returns 0 on no response
-	 * Returns a negative number on error
+	 *  Returns 1 on successful host resposne
+	 *  Returns 0 on no response
+	 *  Returns a negative number on error
 	 */
 	HANDLE hIcmpFile;
 	unsigned long ipaddr = INADDR_NONE;
@@ -484,22 +483,22 @@ unsigned short tcp_sum_calc(unsigned short len_tcp, unsigned short src_addr[],un
 	unsigned long sum;
 	int nleft;
 	unsigned short *w;
-	 
+
 	sum = 0;
 	nleft = len_tcp;
 	w = buff;
-	
+
 	/* calculate the checksum for the tcp header and payload */
 	while(nleft > 1) {
 		sum += *w++;
 		nleft -= 2;
 	}
-	
+
 	/* if nleft is 1 there ist still on byte left. We add a padding byte (0xFF) to build a 16bit word */
 	if(nleft>0) {
 		sum += *w&ntohs(0xFF00); /* Thanks to Dalton */
 	}
-	
+
 	/* add the pseudo header */
 	sum += src_addr[0];
 	sum += src_addr[1];
@@ -507,12 +506,12 @@ unsigned short tcp_sum_calc(unsigned short len_tcp, unsigned short src_addr[],un
 	sum += dest_addr[1];
 	sum += htons(len_tcp);
 	sum += htons(prot_tcp);
-	 
-	// keep only the last 16 bits of the 32 bit calculated sum and add the carries
+
+	/* keep only the last 16 bits of the 32 bit calculated sum and add the carries */
 	sum = (sum >> 16) + (sum & 0xFFFF);
 	sum += (sum >> 16);
-	
-	// Take the one's complement of sum
+
+	/* Take the one's complement of sum */
 	sum = ~sum;
 	return ((unsigned short) sum);
 }

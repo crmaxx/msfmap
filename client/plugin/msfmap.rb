@@ -2,7 +2,7 @@ require 'rex/socket'
 require 'rex/post/meterpreter/extensions/msfmap/config'
 
 module Msf
-class Plugin::MSFMap < Msf::Plugin	
+class Plugin::MSFMap < Msf::Plugin
 	class MSFMapCommandDispatcher
 		include Msf::Ui::Console::CommandDispatcher
 
@@ -22,13 +22,13 @@ class Plugin::MSFMap < Msf::Plugin
 			# see lib/msf/core/auxiliary/scanner.rb lines 78 - 90 for an
 			# example on msf-friendly multi threading
 		end
-		
+
 		def get_sessions_attached_to_network(targetNetwork)
 			# This will yeild a list of windows meterpreter sessions that
 			# have interfaces directly attached to the target network.
 			sessionsToUse = Array.new
 			targetNetwork = Rex::Socket.addr_aton(targetNetwork)
-			
+
 			framework.sessions.each_sorted do |session_id|
 				session = framework.sessions.get(session_id)
 				next if session.type != "meterpreter"
@@ -41,10 +41,10 @@ class Plugin::MSFMap < Msf::Plugin
 					sessionsToUse.push(session_id) if targetNetwork == (Rex::Socket.addr_aton(interface.ip) & Rex::Socket.addr_aton(interface.netmask))
 				end
 			end
-			
+
 			return sessionsToUse
 		end
-		
+
 		def get_sessions_from_common_networks
 			# This function checks all interfaces on windows meterpreter sessions
 			# It then organizes the data to find which network has the most number
@@ -75,7 +75,7 @@ class Plugin::MSFMap < Msf::Plugin
 					networksToSessions[network].push(session_id)
 				end
 			end
-			
+
 			highestCount = 0
 			highestCountNetwork = nil
 			networksCounter.each_pair do |key, value|
@@ -90,7 +90,7 @@ class Plugin::MSFMap < Msf::Plugin
 			return networksToSessions[highestCountNetwork]
 		end
 	end
-	
+
 	def initialize(framework, opts)
 		super
 		add_console_dispatcher(MSFMapCommandDispatcher)
@@ -99,11 +99,11 @@ class Plugin::MSFMap < Msf::Plugin
 	def cleanup
 		remove_console_dispatcher('MSFMap')
 	end
-	
+
 	def name
 		"msfmap"
 	end
-	
+
 	def desc
 		"MSFMap - Distributed Port Scanning"
 	end

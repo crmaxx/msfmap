@@ -1,7 +1,7 @@
 /*
- * This file contains a bunch of define statements to make
- * tuning the "timing profiles" of the scanner easier by
- * keeping them all in one place.
+ *  This file contains a bunch of define statements to make
+ *  tuning the "timing profiles" of the scanner easier by
+ *  keeping them all in one place.
  */
 
 #define TIMING_PROFILE_0_PING_RETRIES 4

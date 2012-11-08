@@ -24,7 +24,7 @@ class MSFMapConfig
 		self.opts['scan_type'] = 'tcp_connect'
 		self.opts['ports-top'] = 100	# this is also used as the defualt number of ports to scan (NMap's top X ports).
 		self.opts['timing'] = 3
-		
+
 		self.arg_parser = Rex::Parser::Arguments.new(
 			"-h"			=> [ false, "Print this help summary page." ],
 			"-oN"			=> [ true,	"Output scan in normal format to the given filename." ],
@@ -39,7 +39,7 @@ class MSFMapConfig
 		)
 		self.verbosity = 0
 	end
-	
+
 	def parse(args)
 		args.each do |opt|	# parse custom arguments first
 			if opt[0..1] == "-T" and [ "0", "1", "2", "3", "4", "5" ].include?(opt[2,1])
@@ -65,7 +65,7 @@ class MSFMapConfig
 		self.arg_parser.parse(args) { |opt, idx, val|
 			case opt
 				when "-oN"
-					self.out_normal = ::File.open(val, "w")
+					self.out_normal = ::File.open(val, "wb")
 				when "-p"
 					if val == "-"
 						self.opts['ports'] = Rex::Socket.portspec_crack("1-65535")
@@ -87,11 +87,11 @@ class MSFMapConfig
 		}
 		return true
 	end
-	
+
 	def nmap_services
 		Rex::Post::Meterpreter::Extensions::MSFMap::MSFMapConfig.get_nmap_services_by_proto(self.opts['scan_type'][0,3])
 	end
-	
+
 	#
 	# Locate and parse a nmap-services file from a NMap install
 	# ip_proto is either tcp or udp, the caller needs to check this
@@ -114,9 +114,9 @@ class MSFMapConfig
 		if not nmap_services_file
 			return {}
 		end
-		
+
 		services = {}
-		nmap_services_file_h = ::File.open(nmap_services_file, 'r')
+		nmap_services_file_h = ::File.open(nmap_services_file, 'rb')
 		begin
 			while (line = nmap_services_file_h.readline)
 				if line[0,1] == '#'

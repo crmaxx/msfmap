@@ -22,7 +22,7 @@ class MSFMap < Extension
 		super(client, 'msfmap')
 		client.register_extension_aliases(
 			[
-				{ 
+				{
 					'name' => 'msfmap',
 					'ext'	=> self
 				},
@@ -31,7 +31,7 @@ class MSFMap < Extension
 		@number_of_threads = 0
 		@last_error = 0
 	end
-	
+
 	def msfmap_init(opts = {})
 		return if @thread_holder_ptr != nil
 		# init shit here
@@ -56,7 +56,7 @@ class MSFMap < Extension
 			when 'ping'
 				scan_type = MSFMAP_OPTS_SCAN_TYPE_PING
 		end
-		
+
 		timing_profile = opts['timing'] || 3	# get the timing profile 0-5 then translate it to the proper bit mask
 		case timing_profile
 			when 0	# DO NOT CHANGE THE NUMBER OF THREADS
@@ -78,11 +78,11 @@ class MSFMap < Extension
 				timing_profile = MSFMAP_OPTS_TIMING_5
 				self.number_of_threads = 128
 		end
-		
+
 		request = Packet.create_request('msfmap_init')
 		portspacked = pack_ports(ports)
 		request.add_tlv(TLV_TYPE_MSFMAP_PORTS_SPECIFICATION, portspacked)
-		
+
 		# configure option flags
 		options = 0
 		if ping
@@ -90,13 +90,13 @@ class MSFMap < Extension
 		end
 		options = (options | timing_profile)
 		options = (options | scan_type)
-		
+
 		request.add_tlv(TLV_TYPE_MSFMAP_SCAN_OPTIONS, options)
-		
+
 		response = client.send_request(request)
 		thread_holder = response.get_tlv_value(TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION)
 		error_flags = response.get_tlv_value(TLV_TYPE_MSFMAP_RETURN_FLAGS)
-		
+
 		if (error_flags & MSFMAP_RET_ERROR_FLAGS) == 0
 			@thread_holder_ptr = thread_holder
 			return true
@@ -108,7 +108,7 @@ class MSFMap < Extension
 
 	def msfmap_core(rex_ip_range)
 		return if @thread_holder_ptr == nil
-		
+
 		# shits init'ed now run shit
 		# build the first list of IPs to go
 		ipaddrs = []
@@ -123,7 +123,7 @@ class MSFMap < Extension
 			ipaddrs.push(Rex::Socket.addr_aton(next_ip))
 		end
 		ipaddrs = pack_ips(ipaddrs)
-		
+
 		ips_in_remote_queue = ((ipaddrs.length / 4) - 1)	# minus one for the null trailer
 		while ips_in_remote_queue > 0
 			if ip_info_holder.keys.include?(ip_local_queue[0])
@@ -134,13 +134,13 @@ class MSFMap < Extension
 				end
 				next
 			end
-			
+
 			request = Packet.create_request('msfmap_core')
 			request.add_tlv(TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, @thread_holder_ptr)
 			request.add_tlv(TLV_TYPE_MSFMAP_IPADDRESSES, ipaddrs)
 
 			response = client.send_request(request)
-			
+
 			ips_in_remote_queue -= 1
 			next_ip = rex_ip_range.next_ip
 			if next_ip == nil
@@ -188,7 +188,7 @@ class MSFMap < Extension
 			end
 			yield [ host_result ]
 		end
-		
+
 		while ip_local_queue.length > 0
 			ip_addr = ip_local_queue.shift
 			if ip_info_holder.keys.include?(ip_addr)
@@ -199,7 +199,7 @@ class MSFMap < Extension
 			end
 		end
 	end
-	
+
 	def msfmap_cleanup()
 		return if @thread_holder_ptr == nil
 
@@ -209,18 +209,18 @@ class MSFMap < Extension
 		@thread_holder_ptr = nil
 		return
 	end
-	
+
 	def msfmap_get_last_error()
 		return @last_error
 	end
-	
+
 	def pack_ips(ips)
 		ips.push("\x00\x00\x00\x00")
 		ipspacked = ips.join('')
 		ips.pop()
 		return ipspacked
 	end
-	
+
 	def unpack_ips(ips)
 		ipsunpacked = Array.new
 		(0..(ips.length - 4)).step(4) do |i|
@@ -228,7 +228,7 @@ class MSFMap < Extension
 		end
 		return ipsunpacked
 	end
-	
+
 	def pack_ports(ports)
 		# DONT GET RID OF THIS LINE
 		ports.push(0)	# Must be null terminated for the C side of the code
@@ -236,7 +236,7 @@ class MSFMap < Extension
 		ports.pop()		# Remove the trailing 0 so the original array is un altered
 		return portspacked
 	end
-	
+
 	def unpack_ports(ports)
 		return ports.unpack("S" * (ports.length / 2))
 	end

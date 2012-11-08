@@ -6,7 +6,7 @@
 
 /* #define DEBUG */
 
-#define BUFFER_SIZE 1024	// 512 packed ports or 256 packed ips
+#define BUFFER_SIZE 1024	/* 512 packed ports or 256 packed ips */
 #define BUFFER_SIZE_INCREMENT 512
 #define NUMBER_OF_THREADS 16
 #define WINDOW_SIZE 8192
@@ -45,13 +45,13 @@ typedef struct msfmap_scan_options {
 typedef struct msfmap_thread_info {
 	HANDLE WINAPI threadHandle;
 	unsigned long targetIP;
-	unsigned short *portSpec;							// ports to scan, this is the same across all threads and should never be modified
+	unsigned short *portSpec;							/* ports to scan, this is the same across all threads and should never be modified */
 	msfmap_scan_options *scanOptions;
 	unsigned int returnFlags;
-	// next three are for recording open ports
-	unsigned int openPortsBufferEntries;				// number of entries in the buffer, (size being used is this * 2)
-	unsigned int openPortsBufferSize;					// the initial size of the buffer (space available)
-	unsigned short *openPortsBuffer;					// pointer to the initial buffer that will be malloc'd
+	/* next three are for recording open ports */
+	unsigned int openPortsBufferEntries;				/* number of entries in the buffer, (size being used is this * 2) */
+	unsigned int openPortsBufferSize;					/* the initial size of the buffer (space available) */
+	unsigned short *openPortsBuffer;					/* pointer to the initial buffer that will be malloc'd */
 } msfmap_thread_info;
 
 typedef unsigned int tcp_seq;

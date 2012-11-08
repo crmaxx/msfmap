@@ -29,18 +29,18 @@ class Console::CommandDispatcher::MSFMap
 			"msfmap" 		=> "Meterpreter Port Scanner",
 		}
 	end
-	
+
 	@@msfmap_version = '0.1.1'
-	
+
 	def cmd_msfmap(*args)
 		verbosity = 0
 		out_normal = nil
 		opts = {}	# next lines define scan defaults
 		opts['ping'] = true
 		opts['scan_type'] = 'tcp_connect'
-		
+
 		msfmapConfig = Rex::Post::Meterpreter::Extensions::MSFMap::MSFMapConfig.new
-		
+
 		if args.length < 1 or args.include?("-h")
 			print_line("MSFMap (v#{@@msfmap_version}) Meterpreter Base Port Scanner")
 			print_line("Usage: msfmap [Options] {target specification}")
@@ -78,14 +78,14 @@ class Console::CommandDispatcher::MSFMap
 			end
 			return true
 		end
-		
+
 		print_line("")
 		print_line("Starting MSFMap #{@@msfmap_version}")
 		if msfmapConfig.out_normal
 			msfmapConfig.out_normal.write("Starting MSFMap #{@@msfmap_version}\n")
 		end
 		start_time = Time.now
-		
+
 		scan_results_length = 0
 		if msfmapConfig.opts['scan_type'][0,3] == 'tcp' or msfmapConfig.opts['scan_type'][0,3] == 'udp'	# setup stuff for scans that include ports
 			if msfmapConfig.opts.include?('ports')
@@ -111,16 +111,17 @@ class Console::CommandDispatcher::MSFMap
 						output_msg << "Not shown: #{not_shown_ports} closed ports\n"
 					end
 					host_result['open_ports'] = host_result['open_ports'].sort()
-					
+
 					largest_num_space = host_result['open_ports'][-1].to_s.length + 4 # plus 4 for the /tcp or /udp
 					if host_result['open_ports'].length != 0
 						output_msg << "PORT " + " " * (largest_num_space - 4) + "STATE SERVICE\n"
 					end
 					host_result['open_ports'].each do |port|
+						output_msg << port.to_s + "/tcp" + " " * (largest_num_space - port.to_s.length - 3) + "open  "
 						if services.include?(port)
-							output_msg << port.to_s + "/tcp" + " " * (largest_num_space - port.to_s.length - 3) + "open  " + services[port] + "\n"
+							output_msg << services[port] + "\n"
 						else
-							output_msg << port.to_s + "/tcp" + " " * (largest_num_space - port.to_s.length - 3) + "open  unknown\n"
+							output_msg << "unknown\n"
 						end
 					end
 				end
@@ -130,12 +131,23 @@ class Console::CommandDispatcher::MSFMap
 				end
 			end
 		end
-		
+
 		end_time = Time.now
 		elapsed_time = (end_time - start_time).round(2)
-		print_line("MSFMap done: #{ip_range_walker.length} IP address#{"es" if ip_range_walker.length > 1} (#{scan_results_length} host#{"s" if scan_results_length > 1 or scan_results_length == 0} up) scanned in #{elapsed_time} seconds\n")
+		closing_msg = "MSFMap done: #{ip_range_walker.length} IP address"
+		if ip_range_walker.length > 1
+			closing_msg << "es"
+		end
+		closing_msg << " (#{scan_results_length} host"
+		if scan_results_length > 1 or scan_results_length == 0
+			closing_msg << "s"
+		end
+		closing_msg << " up) scanned in #{elapsed_time} seconds"
+		print_line(closing_msg)
+		print_line("")
 		if msfmapConfig.out_normal
-			msfmapConfig.out_normal.write("MSFMap done: #{ip_range_walker.length} IP address#{"es" if ip_range_walker.length > 1} (#{scan_results_length} host#{"s" if scan_results_length > 1 or scan_results_length == 0} up) scanned in #{elapsed_time} seconds\n")
+			closing_msg << "\n"
+			msfmapConfig.out_normal.write(closing_msg)
 			msfmapConfig.out_normal.close
 		end
 
