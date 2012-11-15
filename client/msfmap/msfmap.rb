@@ -111,7 +111,6 @@ class MSFMap < Extension
 		return false if @thread_holder_ptr == nil
 		@last_error = 0
 
-		# shits init'ed now run shit
 		# build the first list of IPs to go
 		ipaddrs = []
 		ip_local_queue = []
@@ -137,11 +136,20 @@ class MSFMap < Extension
 				next
 			end
 
-			request = Packet.create_request('msfmap_core')
-			request.add_tlv(TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, @thread_holder_ptr)
-			request.add_tlv(TLV_TYPE_MSFMAP_IPADDRESSES, ipaddrs)
+			begin
+				request = Packet.create_request('msfmap_core')
+				request.add_tlv(TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION, @thread_holder_ptr)
+				request.add_tlv(TLV_TYPE_MSFMAP_IPADDRESSES, ipaddrs)
 
-			response = client.send_request(request)
+				response = client.send_request(request)
+				ipaddrs = "\x00\x00\x00\x00" # don't resend the IP to be processed
+			end until response.has_tlv?(TLV_TYPE_MSFMAP_IPADDRESSES) or (response.get_tlv_value(TLV_TYPE_MSFMAP_RETURN_FLAGS) & MSFMAP_RET_ERROR_FLAGS) != 0
+
+			return_flags = response.get_tlv_value(TLV_TYPE_MSFMAP_RETURN_FLAGS)
+			if not response.has_tlv?(TLV_TYPE_MSFMAP_IPADDRESSES) and ((return_flags & MSFMAP_RET_ERROR_FLAGS) != 0)
+				@last_error = (return_flags & MSFMAP_RET_ERROR_FLAGS)
+				return false
+			end
 
 			ips_in_remote_queue -= 1
 			next_ip = rex_ip_range.next_ip
@@ -153,7 +161,6 @@ class MSFMap < Extension
 				ips_in_remote_queue += 1
 			end
 
-			return_flags = response.get_tlv_value(TLV_TYPE_MSFMAP_RETURN_FLAGS)
 			host = response.get_tlv_value(TLV_TYPE_MSFMAP_IPADDRESSES)
 			host = unpack_ips(host)
 			host = Rex::Socket.addr_ntoa(host[0])

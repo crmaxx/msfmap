@@ -190,6 +190,7 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 	int pingCounter = 0;
 	int scanType = ((*ThreadInfo).scanOptions->optionFlags & MSFMAP_OPTS_SCAN_TYPE_FLAGS);
 	DWORD (*scanFunction)(unsigned long packedIPaddr, unsigned short portNum, msfmap_scan_options *ScanOptions) = NULL;
+	DWORD scanResult = 0;
 	unsigned short *shuffledPortList = NULL;
 
 	/* start by checking if we should continue */
@@ -243,7 +244,8 @@ DWORD WINAPI scanThread( LPVOID lpParam) {
 	}
 
 	while (shuffledPortList[currentPort] != 0) {
-		if (scanFunction((*ThreadInfo).targetIP, shuffledPortList[currentPort], (*ThreadInfo).scanOptions) == 0) {
+		scanResult = scanFunction((*ThreadInfo).targetIP, shuffledPortList[currentPort], (*ThreadInfo).scanOptions);
+		if (scanResult == 0) {
 			if (((*ThreadInfo).openPortsBufferEntries * 2) >= (*ThreadInfo).openPortsBufferSize) {
 				(*ThreadInfo).openPortsBuffer = (unsigned short *)increaseBuffer((*ThreadInfo).openPortsBuffer, (*ThreadInfo).openPortsBufferSize, BUFFER_SIZE_INCREMENT);
 				if ((*ThreadInfo).openPortsBuffer == NULL) {

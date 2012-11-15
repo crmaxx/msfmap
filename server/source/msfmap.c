@@ -175,7 +175,10 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 	unsigned long *packedIPaddr;
 	unsigned char packedIPaddrPos = 0;
 	DWORD dwRetVal = WAIT_TIMEOUT;
+	time_t start_time;
+	time_t current_time;
 
+	time(&start_time);
 	(unsigned int)ThreadHolder = packet_get_tlv_value_uint(packet, TLV_TYPE_MSFMAP_THREAD_HOLDER_LOCATION);
 	packedIPaddr = (unsigned long *)packet_get_tlv_value_raw(packet, TLV_TYPE_MSFMAP_IPADDRESSES);
 
@@ -200,13 +203,21 @@ DWORD request_msfmap_core(Remote *remote, Packet *packet) {
 	printf("CORE: Thread #%i Returned.\n", threadHolderPos);
 #endif
 					break;
+				} else {
+					time(&current_time);
+					if (difftime(current_time, start_time) >= MAX_REQ_TIMEOUT) {
+						/* Set the return flags to 0 and return */
+						/* This is to avoid a timeout on the ruby side */
+						packet_add_tlv_uint(response, TLV_TYPE_MSFMAP_RETURN_FLAGS, 0);
+						packet_transmit_response(ERROR_SUCCESS, remote, response);
+						return ERROR_SUCCESS;
+					}
 				}
 			}
 		}
 	}
 
 	/* Cleanup the thread that returned, prepare it to be reused and harvest the info */
-	/* harvest */
 	packet_add_tlv_raw(response, TLV_TYPE_MSFMAP_IPADDRESSES, &(ThreadHolder[threadHolderPos].targetIP), sizeof(unsigned long));	/* only responds with the first one */
 	packet_add_tlv_raw(response, TLV_TYPE_MSFMAP_PORTS_OPEN, ThreadHolder[threadHolderPos].openPortsBuffer, (ThreadHolder[threadHolderPos].openPortsBufferEntries * sizeof(unsigned short)));
 

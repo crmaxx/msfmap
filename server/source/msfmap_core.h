@@ -8,7 +8,7 @@
 
 #define BUFFER_SIZE 1024	/* 512 packed ports or 256 packed ips */
 #define BUFFER_SIZE_INCREMENT 512
-#define NUMBER_OF_THREADS 16
+#define MAX_REQ_TIMEOUT 10
 #define WINDOW_SIZE 8192
 #define CALCULATE_SIZE_OF_THREAD_HOLDER (sizeof(msfmap_thread_info) * (*ScanOptions).numberOfThreads)
 #define RAND_PORT_MAX 55000
