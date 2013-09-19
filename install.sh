@@ -50,7 +50,7 @@ cp server/ext_server_msfmap.dll $1/data/meterpreter/
 echo "cp server/ext_server_msfmap.x64.dll $1/data/meterpreter/"
 cp server/ext_server_msfmap.x64.dll $1/data/meterpreter/
 
-echo "cp -r server/source $1/external/source/meterpreter/source/extensions/msfmap"
-cp -r server/source $1/external/source/meterpreter/source/extensions/msfmap
+# echo "cp -r server/source $1/external/source/meterpreter/source/extensions/msfmap"
+# cp -r server/source $1/external/source/meterpreter/source/extensions/msfmap
 
 echo "Done."
