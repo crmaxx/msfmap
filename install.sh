@@ -44,7 +44,7 @@ cp -r client/msfmap $1/lib/rex/post/meterpreter/extensions/
 # echo "cp client/plugin/msfmap.rb $1/plugins/msfmap.rb"
 # cp client/plugin/msfmap.rb $1/plugins/msfmap.rb
 
-echo "cp server/ext_server_msfmap.dll $1/data/meterpreter/"
+echo "cp server/ext_server_msfmap.x86.dll $1/data/meterpreter/"
 cp server/ext_server_msfmap.dll $1/data/meterpreter/
 
 echo "cp server/ext_server_msfmap.x64.dll $1/data/meterpreter/"
